@@ -7,3 +7,4 @@
 ### 추가
 
 - 저장소 기본 설정: 기여 안내, 에이전트 작업 규칙, 이슈와 PR 양식, 브랜치 이름 검사 CI
+- 프로젝트 골격: `pyproject.toml`, uv, `src/aicollab/`, `aicollab` 명령 진입점, ruff, mypy, pytest 설정, CI 검사 단계
