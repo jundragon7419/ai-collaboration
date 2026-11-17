@@ -20,7 +20,7 @@
 
 이번 실행 환경에는 `GIT_CONFIG_PARAMETERS`가 있었다. 정리 전 스크립트로 한 첫 실행과 정리 뒤 실행의 관찰은 commit SHA와 소요 시간을 빼면 G1부터 G6까지 같았다.
 
-Windows에서는 실행하지 않았다. 기존 기록의 Windows Git은 `2.53.0.windows.2`([04-review C11](../04-review.md#명령-실행-기록))로 이번 실행 환경과 버전이 다르다. Windows의 hooks 실행(sh.exe), 경로 표기, 서명 프로그램 호출은 미확인이다. 같은 스크립트를 Windows에서 실행하면 같은 형식의 `results.json`이 나온다.
+Windows에서는 이슈 #14의 시작 전 확인으로 같은 스크립트를 실행했다. 환경과 결과는 [Windows 결과](#windows-결과-git-253)에 있다.
 
 관찰 원본은 [fixtures/git-behavior/linux-git-2.34.1.json](fixtures/git-behavior/linux-git-2.34.1.json)에 있다. 임시 경로는 `<TMP>`로 바꿨다.
 
@@ -142,9 +142,61 @@ git push --porcelain --force-with-lease=refs/heads/aicollab/run-6: origin HEAD:r
 
 결론: 생성 전용 lease(`--force-with-lease=<ref>:`)는 확인됨. [01-plan 공개](../01-plan.md#공개)의 "최초 새 ref는 부재 조건을 둔 생성 전용 lease" 구현안대로 동작한다. `gh pr create`의 push 동작은 공식 문서상 [R49](../04-review.md#r49-gh-인증과-pr-미리보기의-외부-실행-경계) 내용과 맞지만 실행 확인 불가다. Windows에서 gh가 있는 환경으로 스크립트를 다시 실행하면 `gh --version`과 `gh pr create --help`의 push 관련 줄을 기록한다. 실제 PR 생성 시험은 하지 않는다.
 
+## Windows 결과 (Git 2.53)
+
+이슈 #14의 시작 전 확인이다. `develop`(1f153be)의 `scripts/probes/git_behavior.py`를 고치지 않고 실행했다. 모델 호출은 없다.
+
+| 항목 | 값 |
+|---|---|
+| 실행일 | 2026-11-17 |
+| OS | Windows 11 (`Windows-11-10.0.26200-SP0`) |
+| Git | `git version 2.53.0.windows.2` |
+| Python | 3.13.15 (`py -3`) |
+| gh | `gh version 2.100.0 (2026-09-03)` |
+| 콘솔 | `chcp 65001`, `PYTHONIOENCODING=utf-8` |
+| 실행 명령 | `py -3 git_behavior.py --out <출력 폴더>` |
+| 결과 | exit 0, `script_errors` 없음, 약 13초 |
+
+실행한 창에는 `GIT_`로 시작하는 상속 환경 변수가 없었다(`inherited_git_env_removed`가 빈 목록). 관찰 원본은 [fixtures/git-behavior/windows-git-2.53.0.json](fixtures/git-behavior/windows-git-2.53.0.json)에 있다.
+
+### Linux 결과와 비교
+
+| ID | 비교 | 다른 점 |
+|---|---|---|
+| G1 | exit code와 동작이 같음 | 오류 문구와 경로 구분자 |
+| G2 | hook 실행 순서와 `--no-verify` 동작이 같음 | hook 안의 작업 디렉터리 표기 |
+| G3 | 다섯 경우 모두 같음 | 없음 |
+| G4 | 설정 탐지, 실패하는 서명 프로그램, ssh 형식의 키 없음은 같음 | 대기하는 서명 프로그램 사례가 재현되지 않음 |
+| G5 | 네 경우와 CRLF 사례가 모두 같음 | 없음 |
+| G6 | push lease와 `--dry-run`이 같음 | gh가 있어 `gh pr create --help`를 기록함 |
+
+G1:
+
+- 같은 branch 이름의 `worktree add -b`는 exit 255다. stderr는 `Preparing worktree (new branch 'aicollab/run-1')` 줄 뒤에 `fatal: a branch named 'aicollab/run-1' already exists`다. Git 2.34의 `fatal: A branch named ... already exists.`와 대소문자, 마침표가 다르다. 실패 판정에 문구를 쓰면 버전에 따라 어긋난다.
+- `worktree list --porcelain`의 경로는 `/` 구분자이고, `worktree remove` 오류 문구의 경로는 `\` 구분자다. 같은 경로가 출력에 따라 다르게 표기된다.
+- untracked 파일이 있는 worktree의 `remove`는 exit 128, `--force`는 exit 0, 폴더를 직접 지운 뒤의 `prunable` 표시와 `prune -v` 출력은 Linux와 같다.
+
+G2:
+
+- `post-checkout`, `pre-commit`, `commit-msg`, `post-commit`이 Linux와 같은 순서와 인자로 실행됐다. `--no-verify`에서도 `post-commit`은 실행됐다.
+- hook 안의 `pwd`는 MSYS 형식 경로(`/tmp/aicollab-git-probe-...`)였고, `GIT_DIR`과 `commit-msg`의 인자는 드라이브 문자가 있는 `/` 구분자 경로였다. hook이 남긴 경로를 Windows 경로와 문자열로 비교할 수 없다.
+
+G4:
+
+- 실패하는 서명 프로그램: commit exit 128, HEAD 그대로다. stderr는 `error: gpg failed to sign the data:` 뒤에 서명 프로그램의 stderr(`signing refused ?`)가 붙는다. Git 2.34에는 서명 프로그램의 출력이 없었다.
+- 대기하는 서명 프로그램: 재현되지 않았다. 스크립트의 Windows용 프로그램(`set /p`로 입력을 기다리는 `.cmd`)은 0.137초 만에 끝났고 commit은 exit 128, `error: gpg failed to sign the data:`, `(no gpg output)`이었다. Git이 서명 프로그램의 stdin으로 서명 대상을 넘기므로 `set /p`가 그 입력을 읽고 바로 끝난 것으로 보이나 원인은 확인하지 않았다. HEAD는 그대로이고 `index.lock`도 남지 않았다.
+- 사용자 설정에는 서명 관련 키가 없었다(exit 1).
+
+G6:
+
+- 로컬 bare remote의 생성 전용 lease는 첫 push exit 0과 `[new branch]`, 두 번째 push exit 1과 `[rejected] (stale info)`로 Linux와 같다. 출력의 remote 경로는 `\` 구분자다.
+- `gh pr create --help`(gh 2.100.0)에는 현재 branch가 remote에 다 push되지 않았으면 push할 곳을 묻고 fork 선택지를 준다는 설명, `--head`가 fork와 push 동작을 건너뛴다는 설명, `--dry-run`이 git 변경을 push할 수 있다는 설명(`May still push git changes.`)이 있다. Linux 실행에서 공식 문서로만 확인한 내용과 같다. 실제 PR 생성과 push는 실행하지 않았다.
+
+결론: G1, G2, G3, G5, G6의 판정 근거(exit code, tree 비교, `status --porcelain`, push 결과)는 Windows Git 2.53에서도 같다. 다른 점은 오류 문구, 경로 표기, 서명 실패 stderr다. Git 출력의 문구와 경로 문자열로 판정하지 않고 exit code, object ID, NUL 구분 경로로 판정해야 한다. Windows에서 사람 입력을 기다리는 서명 프로그램의 동작은 미확인이다.
+
 ## 남은 미확인
 
-- Windows Git 2.53에서 같은 결과가 나오는지
+- Windows에서 입력을 기다리는 서명 프로그램의 동작과 시간 상한으로 끊었을 때의 상태. 스크립트의 Windows용 대기 프로그램이 대기하지 않았다
 - 실제 서명 프로그램과 agent의 사람 개입 여부
 - 시간 상한으로 git을 끊었을 때 서명 프로그램 자식 프로세스가 남는지
-- 설치된 gh 버전의 `gh pr create` 실제 push 동작
+- `gh pr create`의 실제 push 동작. gh 2.100.0의 도움말만 확인했다
