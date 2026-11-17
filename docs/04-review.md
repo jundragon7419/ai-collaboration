@@ -507,9 +507,9 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 문제: 전체 ID의 문서 및 catalog 존재는 계정 접근이나 실제 실행을 보장하지 않는다. Fable은 설치된 Claude 버전이 부족하다.
 - 근거: Claude 2.1.316, Codex 내장 catalog, [Claude 목록](https://platform.claude.com/docs/en/models/overview), [모델 설정](https://code.claude.com/docs/en/model-config), [Codex Models](https://learn.chatgpt.com/docs/models).
 - 심각도: 중간.
-- 반영: doctor가 모델별 최소 CLI 버전을 검사하고 미달 agent를 failed-version-check로 처리한다. Fable 최소 2.1.321보다 낮은 설치 2.1.316에서 모델 호출하지 않는다.
+- 반영: doctor가 모델별 최소 CLI 버전을 검사하고 미달 agent를 failed-version-check로 처리한다. Fable 최소 2.1.321보다 낮은 설치 2.1.316에서 모델 호출하지 않는다. 이 반영은 D14로 바뀌었다.
 - 상태: 2026-11-17 결정 반영.
-- M0 결과: Claude 2.1.316에서 `claude-fable-5-2` 호출이 성공했다. 결정된 규칙의 전제와 달라 [D14](05-open-decisions.md#d14-fable과-최소-cli-버전-규칙)로 올렸다. Codex 모델 4개는 0.167.0-alpha.3.2에서 실행됐다. [claude-headless C1](probes/claude-headless.md#c1-전체-모델-id-4개-지정), [codex-exec X1](probes/codex-exec.md#x1-모델-id-4개-지정)
+- M0 결과: Claude 2.1.316에서 `claude-fable-5-2` 호출이 성공했다. 결정된 규칙의 전제와 달라 [D14](05-open-decisions.md#d14-fable과-최소-cli-버전-경고)로 정했다. 최소 버전 미달은 경고로 바꾸고 probe 결과로 판정한다. 2.1.321은 CLI가 이 ID를 인식하는 첫 버전이다. Codex 모델 4개는 0.167.0-alpha.3.2에서 실행됐다. [claude-headless C1](probes/claude-headless.md#c1-전체-모델-id-4개-지정), [codex-exec X1](probes/codex-exec.md#x1-모델-id-4개-지정)
 
 ### R53 결정 원문의 누락과 과거 요약 충돌
 
@@ -579,7 +579,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 심각도: 중간.
 - 반영: 해결: D12 확정. 기존 lock을 유지하고 부재와 manifest 불일치, run 안 lock 변경에서 중단한다. doctor가 run 밖 lock 생성을 안내한다.
 - 상태: 사용자 결정 반영으로 해결.
-- M0 결과: `uv sync`는 lock 부재에서 lock을 만들고 불일치에서 lock을 고친 뒤 exit 0이었다. `uv sync --frozen`은 불일치를 알리지 않고 성공했다. `npm ci`는 부재와 불일치에서 `EUSAGE`로 실패했다. 탐지 방법을 [D16](05-open-decisions.md#d16-lock-불일치-탐지-방법)으로 올렸다. [prepare-behavior](probes/prepare-behavior.md#lock-부재와-불일치-때의-동작)
+- M0 결과: `uv sync`는 lock 부재에서 lock을 만들고 불일치에서 lock을 고친 뒤 exit 0이었다. `uv sync --frozen`은 불일치를 알리지 않고 성공했다. `npm ci`는 부재와 불일치에서 `EUSAGE`로 실패했다. [D16](05-open-decisions.md#d16-lock-일치-사전-확인)에 따라 등록 명령 전에 `uv lock --check`로 확인한다. 이 명령은 부재 exit 2, 불일치 exit 1이고 lock을 바꾸지 않았다. [prepare-behavior](probes/prepare-behavior.md#lock-부재와-불일치-때의-동작)
 
 ### R59 prepare 실패와 부분 의존성 상태의 재사용
 
@@ -664,7 +664,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 근거: [npm run](https://docs.npmjs.com/cli/v11/commands/npm-run/), [npm exec](https://docs.npmjs.com/cli/v11/commands/npm-exec/), [Gradle Wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html), [Maven Wrapper](https://maven.apache.org/tools/wrapper/).
 - 심각도: 높음.
 - 반영: outer .cmd 우회와 shell 완전 제거를 구분했다. 필요한 패키지와 배포본은 prepare에서 확보하고 check에서는 누락을 실패로 처리한다. offline 옵션을 cache 설치까지 막는 보장으로 쓰지 않는다.
-- M0 결과: 공백 있는 wrapper 경로를 argv로 `cmd /d /s /c`에 넘기면 실행이 실패하고 `&` 인자가 명령으로 실행됐다. 다른 방식에서도 `%VAR%` 확장과 `^` 제거가 남았다. 호출 방식을 [D15](05-open-decisions.md#d15-cmd-wrapper-호출-방식)로 올렸다. [windows-process W3](probes/windows-process.md#w3-cmd-d-s-c-wrapper-인자-처리)
+- M0 결과: 공백 있는 wrapper 경로를 argv로 `cmd /d /s /c`에 넘기면 실행이 실패하고 `&` 인자가 명령으로 실행됐다. 다른 방식에서도 `%VAR%` 확장과 `^` 제거가 남았다. [D15](05-open-decisions.md#d15-cmd-wrapper-허용-조건)에 따라 공백 없는 경로와 특수문자 없는 인자만 허용한다. [windows-process W3](probes/windows-process.md#w3-cmd-d-s-c-wrapper-인자-처리)
 
 ### R69 doctor 1회 관측의 재사용 범위
 
@@ -697,12 +697,12 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 
 | ID | 미확인 사실 | 확인 방법과 범위 | M0 결과 |
 |---|---|---|---|
-| U01 | 계정별 모델 제공과 실효 effort, protocol v2 Schema의 실제 CLI 수락 | 선택 agent의 사용량 probe. 최소 버전 미달은 호출 전 실패 | 일부 확인. Claude 모델 4개와 Codex 모델 4개가 실행됐다. Fable은 최소 버전 미달에서도 실행돼 D14로 올렸다. 공통 Schema는 Claude haiku와 Codex `gpt-6-astra`에서 수락됐다. 실효 effort는 두 CLI 모두 출력이 없어 미확인 |
+| U01 | 계정별 모델 제공과 실효 effort, protocol v2 Schema의 실제 CLI 수락 | 선택 agent의 사용량 probe. 최소 버전 미달은 경고 뒤 probe로 판정(D14) | 일부 확인. Claude 모델 4개와 Codex 모델 4개가 실행됐다. Fable은 최소 버전 미달에서도 실행돼 D14로 정했다. 공통 Schema는 Claude haiku와 Codex `gpt-6-astra`에서 수락됐다. 실효 effort는 두 CLI 모두 출력이 없어 미확인 |
 | U02 | 한도 오류와 잔량 및 reset 시각, CLI turn과 비용 상한 | 실제 오류 fixture. 추정값을 채우지 않음 | 인증 오류 형태는 확인. 한도 오류와 잔량, turn과 비용 상한은 확인 불가 |
 | U03 | native와 WSL2의 취소 및 자식 종료, 경로와 인코딩, 디스크 비용 | runtime별 실제 실행 시험 | native는 확인. 손자 프로세스 종료 방식별 결과, 출력 인코딩이 자식마다 다름(Python cp949, node와 git UTF-8). WSL2와 디스크 비용은 미확인 |
 | U04 | prepare 성공과 실패, install script 및 lock 변화, 부분 환경 재개 | 일회용 workspace에서 source와 lock 및 환경 전후 기록 | Linux에서 확인. lock 생성과 수정, 실패 뒤 부분 환경, 루트 lifecycle script의 source 변경. Windows 실행은 미확인 |
 | U05 | check 및 check-probe의 실제 네트워크 차단과 파일 감사 | 실제 프로젝트 명령의 별도 probe. 악의적 외부 부작용 전체 방어는 보장 밖 | 이번 M0에서 시험하지 않음 |
-| U06 | nvm 등 관리 도구와 Corepack의 npm JS resolver, wrapper quoting과 취소 | 해당 환경에서 직접 경로와 버전 고정 및 fixture 시험 | 기본 Node 설치의 npm JS 진입점은 확인. version manager와 Corepack shim은 확인 불가. wrapper quoting은 D15로 올림 |
+| U06 | nvm 등 관리 도구와 Corepack의 npm JS resolver, wrapper quoting과 취소 | 해당 환경에서 직접 경로와 버전 고정 및 fixture 시험 | 기본 Node 설치의 npm JS 진입점은 확인. version manager와 Corepack shim은 확인 불가. wrapper는 D15의 허용 조건으로 정함 |
 | U07 | 실제 signing 프로그램과 agent의 무인 상태, hooks와 filters의 실제 변경 | 개인 설정과 실행 시험은 이번에 하지 않음. commit 전 준비 확인 및 tree 비교 필요 | hooks의 실행과 tree, status, 메시지 변경은 확인. 서명은 설정 탐지와 가짜 프로그램 실패만 확인. 실제 signing agent와 filters는 미확인 |
 | U08 | 준비 로그 분리와 환경 재현, custom 명령 시험 결과의 재사용 | prepare/check/check-probe record와 role 입력 fixture | 이번 M0에서 시험하지 않음 |
 | U09 | 제한 입력 tester 품질과 다양성 효과, P0부터 P5까지의 판정 일관성 | 고정 작업과 사람 판정 실험 | 이번 M0에서 시험하지 않음 |

@@ -67,7 +67,7 @@ control 설정 확인과 doctor → 원본 변경 경고, base HEAD OID 고정
 
 prepare는 모델보다 먼저 실행한다. 등록 명령에 포함된 install script와 자식 프로세스도 실제 준비 작업이다. 명령은 직렬로 실행하고 첫 실패, timeout과 취소에서 prepare-failed로 멈춘다. 부분 환경과 로그는 보존하고 planner와 coder를 시작하지 않는다. uv sync를 다른 명령으로 바꾸거나 npm ci 실패를 npm install로 자동 대체하지 않는다.
 
-prepare 전후 source와 lock을 비교한다. .venv와 node_modules 등 등록한 의존성 산출물은 별도 환경 manifest로 기록하고 모델의 코드 diff와 commit 대상에서 제외한다. source와 lock 변경을 준비 baseline에 묻지 않는다. D12에 따라 기존 lock을 유지한다. lock이 없거나 manifest와 맞지 않으면 중단한다. doctor는 lock 부재를 미리 알리고 사용자가 run 밖에서 uv lock이나 npm install 등으로 한 번 생성하도록 안내한다. run 안의 lock 변경은 중단한다. M0에서 `uv sync`는 lock 부재와 불일치에서 lock을 만들거나 고친 뒤 성공(exit 0)했으므로, 이 중단은 명령의 exit code가 아니라 lock 전후 비교로 건다. `uv sync --frozen`처럼 불일치를 숨기는 등록의 탐지는 [D16](05-open-decisions.md#d16-lock-불일치-탐지-방법)에서 정한다.
+prepare 전후 source와 lock을 비교한다. .venv와 node_modules 등 등록한 의존성 산출물은 별도 환경 manifest로 기록하고 모델의 코드 diff와 commit 대상에서 제외한다. source와 lock 변경을 준비 baseline에 묻지 않는다. D12에 따라 기존 lock을 유지한다. lock이 없거나 manifest와 맞지 않으면 중단한다. doctor는 lock 부재를 미리 알리고 사용자가 run 밖에서 uv lock이나 npm install 등으로 한 번 생성하도록 안내한다. run 안의 lock 변경은 중단한다. M0에서 `uv sync`는 lock 부재와 불일치에서 lock을 만들거나 고친 뒤 성공(exit 0)했으므로, 이 중단은 명령의 exit code가 아니라 lock 전후 비교로 건다. [D16](05-open-decisions.md#d16-lock-일치-사전-확인)에 따라 등록 명령 전에 lock 종류별 확인 명령(uv는 `uv lock --check`)을 실행해, `uv sync --frozen`처럼 불일치를 숨기는 등록도 시작 전에 중단한다.
 
 prepare의 네트워크 허용은 프로젝트 의존성 준비용이다. check와 그 자식 프로세스는 network=blocked이며 missing dependency를 설치하지 않는다. 공식 AI 서비스 통신과 사람이 확인한 Git 공개 통신은 의존성 설치 네트워크와 구분한다. hooks는 평소대로 실행하되 준비되지 않은 도구나 외부 통신 요구로 실패하면 우회하지 않고 중단한다. 이 정책의 실제 적용은 단계 0 확인 대상이다.
 
@@ -123,11 +123,12 @@ local-committed, pushed, draft-created와 committed-unverified를 구분한다. 
 - setup은 flow → 역할별 회사와 모델 → Claude 사용 시 환경 → 검사 → 의존성 준비 명령 → 차단 등급 → 공개 방식 순서를 지킨다.
 - planner와 coder 각각 한 명, 복수 reviewer, 같은 agent의 다중 역할과 프리셋 3종을 실제 실행한다.
 - 원본 변경을 경고하고 고정 HEAD의 run 소스만 사용한다. 별도 확인한 control 설정을 고정하고 원본 변경을 덮어쓰지 않는다.
-- doctor가 lock 부재를 알리고 run 밖 생성을 안내한다. run 안 lock 변경과 계획 밖 manifest 변경을 탐지해 중단한다. 승인 화면은 계획의 새 의존성 필요 여부를 표시한다.
+- doctor가 lock 부재와 불일치를 확인 명령으로 알리고 run 밖 생성을 안내한다(D16). run 안 lock 변경과 계획 밖 manifest 변경을 탐지해 중단한다. 승인 화면은 계획의 새 의존성 필요 여부를 표시한다.
 - workspace 생성 직후 등록 prepare를 실행한다. 성공 후 모델을 시작하며 실패와 부분 상태를 보존한다. 준비 산출물과 소스 및 로그 입력 경계가 동작한다.
 - trusted-local 권한 옵션과 도구 제한을 적용하고 범위 밖 source 및 test_paths 변경의 사후 탐지와 중단을 확인한다. 사전 차단 성공은 완료 필수가 아니다.
+- cmd wrapper는 공백 없는 경로와 특수문자 없는 인자만 허용하고 나머지를 거부한다(D15).
 - custom 검사를 별도 doctor workspace에서 1회 시험하고 검사 off 및 tester flow의 off 거부, 검사 단계 네트워크 차단과 수정 회차를 확인한다.
-- 모델별 최소 CLI 버전보다 낮으면 해당 agent의 probe를 failed-version-check로 처리하고 모델을 호출하지 않는다. 설치 Claude 2.1.316에서 Fable 최소 2.1.321 미달을 확인한다. M0에서 2.1.316의 Fable 호출이 성공해 이 항목은 [D14](05-open-decisions.md#d14-fable과-최소-cli-버전-규칙) 결정에 따라 바뀔 수 있다.
+- 모델별 최소 CLI 버전보다 낮으면 version-warning을 표시하고 probe 호출 결과로 판정한다([D14](05-open-decisions.md#d14-fable과-최소-cli-버전-경고)). 설치 Claude 2.1.316에서 Fable 5.2(최소 2.1.321)의 경고 표시와 probe 결과를 확인한다.
 - 평소 hooks를 실행하고, 사람 개입 서명은 commit 전에 중단한다. hook에 의한 tree 변경과 이미 생성된 미검증 commit의 publish를 차단한다.
 - gate 성공과 Git 결과 무변경이면 commit과 push 없이 “변경 없음”으로 종료한다. 변경 있으면 사용자 identity commit과 확인 후 공개를 수행한다.
 - timeout과 Ctrl+C 후 자식 프로세스 종료를 확인하고 그 전까지 lock을 유지한다. M0에서 Windows의 `Popen.kill()`과 표준 timeout은 손자 프로세스를 남겼으므로 트리 단위 종료가 필요하다. 실제 미확인과 보장 제외 범위를 CLI 결과에 표시한다.

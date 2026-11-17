@@ -10,4 +10,4 @@
 | #6 | [git-behavior.md](git-behavior.md) | Linux VM, Git 2.34.1 | worktree, hooks, tree 비교, 변경 없음 판정, 생성 전용 push lease 확인. commit-msg의 메시지 변경. 실제 서명과 gh는 미확인 |
 | #7 | [prepare-behavior.md](prepare-behavior.md) | Linux 컨테이너, uv 0.11.32, npm 10.9.9 | `uv sync`의 lock 생성과 수정, `--frozen`의 불일치 무시, `npm ci` 실패와 부분 환경, 루트 lifecycle script의 source 변경 |
 
-결과를 기획 문서에 반영한 위치는 [04-review 미확인 사실과 확인 방법](../04-review.md#미확인-사실과-확인-방법)이다. 기존 결정과 맞지 않는 결과는 [05-open-decisions 남은 결정](../05-open-decisions.md#남은-결정)의 D14부터 D16까지다.
+결과를 기획 문서에 반영한 위치는 [04-review 미확인 사실과 확인 방법](../04-review.md#미확인-사실과-확인-방법)이다. 기존 결정과 맞지 않는 결과는 [05-open-decisions](../05-open-decisions.md#결정됨)의 D14부터 D16까지로 정했다.

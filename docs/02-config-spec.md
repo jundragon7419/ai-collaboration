@@ -48,7 +48,7 @@ registry의 enabled는 메뉴 선택 대상이라는 뜻이며 계정 제공과 
 | 회사 | 전체 모델 ID | 확인된 최소 CLI 버전 | 현재 확인 | M0 실행 확인(2026-11-17, Windows) |
 |---|---|---|---|
 | Claude | claude-opus-5-5 | 2.1.280 | 설치 2.1.316은 버전 조건만 충족 | 2.1.316에서 실행됨 |
-| Claude | claude-fable-5-2 | 2.1.321 | 설치 2.1.316은 미달, agent probe 실패 | 2.1.316에서 실행됨. stderr에 `unrecognized_model` 표시. [D14](05-open-decisions.md#d14-fable과-최소-cli-버전-규칙) |
+| Claude | claude-fable-5-2 | 2.1.321 | 설치 2.1.316은 미달. D14에 따라 경고 | 2.1.316에서 실행됨. stderr에 `unrecognized_model` 표시. [D14](05-open-decisions.md#d14-fable과-최소-cli-버전-경고) |
 | Claude | claude-sonnet-5-5 | 2.1.284 | 설치 2.1.316은 버전 조건만 충족 | 2.1.316에서 실행됨 |
 | Claude | claude-haiku-5-5 | 2.1.293 | 설치 2.1.316은 버전 조건만 충족 | 2.1.316에서 실행됨. `--json-schema`, `--effort` 시험 모델 |
 | Codex | gpt-6-astra | 미확인 | binary catalog에 존재 | 0.167.0-alpha.3.2에서 실행됨. `--output-schema`, sandbox, effort 시험 모델 |
@@ -58,7 +58,7 @@ registry의 enabled는 메뉴 선택 대상이라는 뜻이며 계정 제공과 
 
 근거: [Claude 목록](https://platform.claude.com/docs/en/models/overview), [Claude 모델 설정](https://code.claude.com/docs/en/model-config), [Codex Models](https://learn.chatgpt.com/docs/models), 이전에 실행한 codex debug models --bundled. 2026-11-17에도 claude --version에서 2.1.316을 확인했다. M0 실행 확인 열은 [claude-headless](probes/claude-headless.md)와 [codex-exec](probes/codex-exec.md) 결과다. 이 계정에서 8개 모델 모두 실행됐다. Schema 수락은 표에 적은 시험 모델에서만 확인했다. Codex 실행 파일은 PATH에 없었고 Codex 앱 폴더의 `codex.exe`(0.167.0-alpha.3.2)를 썼다. 기존 기록의 0.169.0-alpha.11.1과 버전이 다르다.
 
-doctor는 실제 선택 runtime의 CLI 버전을 모델별 최소값과 비교한다. 미달이면 failed-version-check로 해당 agent의 probe를 실패 처리하고 모델을 호출하지 않는다. 이 규칙은 D14 결정 전까지 유지한다. 전체 ID와 최소 버전을 바꾸거나 자동 업데이트 및 fallback하지 않는다. 최소값 미확인은 버전 성공이 아니며 별도 기능 probe가 필요하다.
+`min_cli_version`은 CLI가 그 모델 ID를 인식하는 첫 버전이다([D14](05-open-decisions.md#d14-fable과-최소-cli-버전-경고)). doctor는 실제 선택 runtime의 CLI 버전을 모델별 최소값과 비교한다. 미달이면 version-warning을 표시하고, 해당 agent의 probe 호출 결과로 사용 가능 여부를 판정한다. 경고에는 설치 버전과 최소 버전, CLI가 모델을 인식하지 못해 context window를 200K로 가정하고 effort 같은 기능이 기대대로 적용되지 않을 수 있다는 점, `claude update` 안내를 표시한다. 전체 ID와 최소 버전을 바꾸거나 자동 업데이트 및 fallback하지 않는다. 최소값 미확인은 버전 성공이 아니며 별도 기능 probe가 필요하다.
 
 ## project와 최상위
 
@@ -126,14 +126,14 @@ workspace → prepare → planner → approve → coder → [tester] → check �
 
 workspace를 만든 직후 prepare를 실행하고 성공해야 planner로 간다. lifecycle script도 등록 명령의 실제 동작에 포함한다. 버전과 cwd 및 config hash, source와 lock 전후 상태, 의존성 산출물과 종료 상태를 기록한다. 설치 인증은 패키지 관리자의 기존 경로를 사용하며 오케스트레이터가 토큰을 추출해 AI와 check에 전달하지 않는다.
 
-uv sync는 lock을 만들거나 갱신할 수 있고 npm ci는 기존 lock이 필요하다. source와 lock 변경을 성공 baseline으로 숨기지 않는다. D12에 따라 기존 lock을 유지하고 부재와 불일치 및 run 안 변경이면 중단한다. doctor가 부재를 미리 알리고 run 밖 lock 생성 명령을 안내한다. 선택된 등록 명령에 몰래 --locked를 추가하거나 npm install로 대체하지 않는다. [uv sync](https://docs.astral.sh/uv/concepts/projects/sync/), [npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/).
+lock 일치 확인은 설정 항목이 아니라 오케스트레이터 내장 단계다. [D16](05-open-decisions.md#d16-lock-일치-사전-확인)에 따라 등록 명령 전에 lock 종류별 확인 명령(uv는 `uv lock --check`)을 실행하고, 실패하면 prepare를 시작하지 않는다. npm 확인 명령은 정하지 않았다. uv sync는 lock을 만들거나 갱신할 수 있고 npm ci는 기존 lock이 필요하다. source와 lock 변경을 성공 baseline으로 숨기지 않는다. D12에 따라 기존 lock을 유지하고 부재와 불일치 및 run 안 변경이면 중단한다. doctor가 부재를 미리 알리고 run 밖 lock 생성 명령을 안내한다. 선택된 등록 명령에 몰래 --locked를 추가하거나 npm install로 대체하지 않는다. [uv sync](https://docs.astral.sh/uv/concepts/projects/sync/), [npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/).
 
 첫 준비 실패와 timeout 또는 취소에서 멈추고 부분 환경을 보존한다. 실패 환경을 준비 완료로 재사용하거나 자동 삭제 및 재시도하지 않는다. 재개는 source와 lock, 명령 및 환경을 다시 확인한다. 설치 stdout과 stderr는 모델 입력에 자동 첨부하지 않는다.
 
 M0 확인 결과([prepare-behavior](probes/prepare-behavior.md), Linux, uv 0.11.32, npm 10.9.9):
 
 - lock이 맞으면 `uv sync`와 `npm ci`는 source와 lock을 바꾸지 않고 의존성 산출물만 만든다.
-- `uv sync`는 lock 부재에서 lock을 만들고 불일치에서 lock을 고친 뒤 exit 0이다. D12의 중단은 lock 전후 비교로 걸어야 한다. `uv sync --frozen`은 불일치를 알리지 않고 성공해 전후 비교로도 탐지되지 않는다. 탐지 방법은 [D16](05-open-decisions.md#d16-lock-불일치-탐지-방법) 결정 전까지 정하지 않는다.
+- `uv sync`는 lock 부재에서 lock을 만들고 불일치에서 lock을 고친 뒤 exit 0이다. `uv sync --frozen`은 불일치를 알리지 않고 성공해 전후 비교로도 탐지되지 않는다. [D16](05-open-decisions.md#d16-lock-일치-사전-확인)에 따라 등록 명령 전에 `uv lock --check`로 부재(exit 2)와 불일치(exit 1)를 먼저 확인하고, 전후 비교도 유지한다.
 - `uv sync --locked`는 실패해도 `.venv`를 먼저 만든다. `npm ci`는 실행할 때마다 기존 `node_modules`를 지우고, 루트 `postinstall`이 실패해도 설치한 의존성을 남긴다. 의존성 폴더 존재는 준비 완료의 근거가 아니다.
 - `npm ci`는 루트 `preinstall`, `postinstall`, `prepare` script를 실행하고 script가 source를 바꿀 수 있다.
 - 상속 환경 변수가 대상을 바꿀 수 있다. `UV_PROJECT_ENVIRONMENT`가 절대 경로면 `uv sync`가 worktree 밖 환경을 고치고 선언되지 않은 패키지를 지운다. `npm_config_global`, `npm_config_prefix` 등도 설치 위치를 바꾼다. prepare 실행 환경에서 이런 변수를 어떻게 다룰지는 문서에 없다.
@@ -212,7 +212,7 @@ doctor는 실제 node, npm JS와 버전을 한 조합으로 고정한다. 인접
 
 대체할 수 없는 gradlew.bat, mvn.cmd와 mvnw.cmd 같은 확인한 wrapper만 고정 경로와 고정 인자로 cmd.exe /d /s /c 실행을 허용한다. prompt와 handoff 문자열을 command에 합치지 않는다. /d와 /s가 자동으로 안전한 quoting을 제공한다고 주장하지 않는다. 공백과 한글, 따옴표와 shell 특수문자 처리는 doctor 시험 대상이다. [Microsoft cmd](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd), [Python subprocess](https://docs.python.org/3/library/subprocess.html#security-considerations).
 
-M0에서 argv `["cmd.exe","/d","/s","/c",<wrapper>,<인자>]`를 Python `subprocess`에 넘기면 wrapper 경로에 공백이 있을 때 wrapper가 실행되지 않았고 `&` 인자가 명령으로 실행됐다. 바깥 따옴표를 한 겹 더 씌운 명령 줄이나 공백 없는 경로에서는 실행됐지만, 모든 방식에서 `%VAR%`가 확장되고 `^`가 사라졌다([windows-process W3](probes/windows-process.md#w3-cmd-d-s-c-wrapper-인자-처리)). wrapper 호출 방식은 [D15](05-open-decisions.md#d15-cmd-wrapper-호출-방식) 결정 전까지 정하지 않는다.
+M0에서 argv `["cmd.exe","/d","/s","/c",<wrapper>,<인자>]`를 Python `subprocess`에 넘기면 wrapper 경로에 공백이 있을 때 wrapper가 실행되지 않았고 `&` 인자가 명령으로 실행됐다. 바깥 따옴표를 한 겹 더 씌운 명령 줄이나 공백 없는 경로에서는 실행됐지만, 모든 방식에서 `%VAR%`가 확장되고 `^`가 사라졌다([windows-process W3](probes/windows-process.md#w3-cmd-d-s-c-wrapper-인자-처리)). [D15](05-open-decisions.md#d15-cmd-wrapper-허용-조건)에 따라 wrapper 경로에 공백이 없고 인자에 `%`, `^`, `&`, `|`, `"`, `<`, `>`, `!`, 줄바꿈이 없을 때만 argv 배열로 `cmd.exe /d /s /c`를 실행하고, 나머지는 setup과 doctor가 거부한다.
 
 프로세스 트리 종료는 Python `Popen.kill()`과 `subprocess.run(timeout=)`만으로는 손자 프로세스가 남았다. `taskkill /T /F`, Job Object, 프로세스 그룹과 `CTRL_BREAK_EVENT`는 손자까지 끝냈다([windows-process W1](probes/windows-process.md#w1-시간-상한-뒤-자식-프로세스까지-종료)). 자식 프로세스의 출력 인코딩은 도구마다 달랐다(Python 자식 cp949, node와 git UTF-8). git 경로 목록은 `-z`로 받아야 한글이 escape되지 않는다([windows-process W4](probes/windows-process.md#w4-출력-인코딩)).
 
