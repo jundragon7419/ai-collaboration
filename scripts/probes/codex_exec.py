@@ -28,7 +28,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-MODELS = ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"]
 EFFORTS = ["minimal", "low", "medium", "high", "xhigh", "bogus-effort"]
 AUTH_ENV = ("OPENAI_API_KEY", "CODEX_API_KEY", "OPENAI_BASE_URL")
 TIMEOUT = 300
@@ -114,6 +113,24 @@ def summarize(res: dict[str, Any], last_file: Path | None = None) -> dict[str, A
     return s
 
 
+def load_registry_models(repo_root: Path, provider: str) -> list[dict[str, Any]]:
+    """docs/02-config-spec.md의 provider registry JSON에서 모델 목록을 읽는다.
+
+    모델 ID와 최소 버전은 registry 한 곳에만 둔다(AGENTS.md). registry 코드(#10)가 생기기 전이라
+    문서의 registry 원문을 읽는다. 저장소 루트에서 실행해야 한다.
+    """
+    doc = repo_root / "docs" / "02-config-spec.md"
+    text = doc.read_text(encoding="utf-8")
+    start = text.find("## provider registry와 최소 버전")
+    m = re.search(r"```json\n(.*?)\n```", text[start:], re.S) if start >= 0 else None
+    if not m:
+        raise SystemExit("docs/02-config-spec.md에서 provider registry를 찾지 못함. 저장소 루트에서 실행해야 함")
+    for entry in json.loads(m.group(1))["providers"]:
+        if entry["id"] == provider:
+            return list(entry["models"])
+    raise SystemExit(f"registry에 {provider} provider가 없음")
+
+
 def load_role_result_schema(repo_root: Path) -> dict[str, Any] | None:
     doc = repo_root / "docs" / "03-roles-and-handoff.md"
     if not doc.exists():
@@ -181,8 +198,11 @@ def main() -> int:
     args = parser.parse_args()
     only = set(args.only.split(","))
 
+    # 상대 경로는 실행 위치 기준으로 바꾼다. CLI는 임시 작업 폴더를 cwd로 실행되기 때문이다.
     codex = args.codex or shutil.which("codex")
-    if codex and not Path(codex).exists():
+    if codex and Path(codex).exists():
+        codex = str(Path(codex).resolve())
+    elif codex:
         codex = shutil.which(codex)
     if not codex:
         print("codex 실행 파일을 찾지 못했습니다.", file=sys.stderr)
@@ -241,10 +261,11 @@ def main() -> int:
             "exec_help_lines": [ln.strip() for ln in h2["stdout"].splitlines() if pick.search(ln)],
         }}
 
+    models = [m["id"] for m in load_registry_models(Path.cwd(), "codex")]
     model = args.model
     if "models" in only:
         obs = {}
-        for m in MODELS:
+        for m in models:
             w = workdir()
             last = w.parent / "last.txt"
             r = rec.run(exec_args(w, m, last=last), w, "Reply with exactly: OK")
@@ -270,6 +291,11 @@ def main() -> int:
             inside = w / "probe-inside.txt"
             # 임시 폴더는 쓰기 허용 경로에 들어갈 수 있어서 바깥 대상은 결과 폴더(임시 폴더 밖)에 둔다.
             outside = (out_dir / f"sandbox-outside-{sandbox}.txt").resolve()
+            # 같은 --out으로 다시 실행하면 이전 결과 파일이 남아 있을 수 있다. 시험 전에 지우고 확인한다.
+            inside.unlink(missing_ok=True)
+            outside.unlink(missing_ok=True)
+            if inside.exists() or outside.exists():
+                raise SystemExit(f"이전 sandbox 시험 파일을 지우지 못함: {outside.name}")
             r = rec.run(exec_args(w, model, sandbox=sandbox, last=w.parent / "last.txt"), w,
                         prompt.format(inside=inside, outside=outside))
             raw[f"sandbox_{sandbox}"] = r
