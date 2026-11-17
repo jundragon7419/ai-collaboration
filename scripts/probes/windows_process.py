@@ -315,44 +315,76 @@ ARG_CASES = [
 ]
 
 
+def _wrapper_case(arg: str, argv: list[str] | None = None, cmdline: str | None = None) -> dict[str, Any]:
+    """argv면 subprocess의 기본 변환(list2cmdline)을, cmdline이면 그 문자열을 그대로 CreateProcess에 넘긴다."""
+    if cmdline is not None:
+        try:
+            p = subprocess.run(cmdline, capture_output=True, timeout=60)
+            r = {"exit_code": p.returncode, "stdout_bytes": p.stdout, "stderr_bytes": p.stderr}
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            r = {"exit_code": None, "error": repr(exc), "stdout_bytes": b"", "stderr_bytes": b""}
+        line = cmdline
+    else:
+        assert argv is not None
+        r = run(argv)
+        line = subprocess.list2cmdline(argv)
+    stdout = text(r["stdout_bytes"]).strip()
+    try:
+        received = json.loads(stdout.splitlines()[0]) if stdout else None
+    except ValueError:
+        received = None
+    return {
+        "sent": arg,
+        "command_line": anonymize(line),
+        "exit_code": r["exit_code"],
+        "received": received,
+        "same": received == [arg] if received is not None else False,
+        "injected": "INJECTED" in stdout.replace(arg, ""),
+        "stdout": anonymize(stdout)[:400],
+        "stderr": anonymize(text(r["stderr_bytes"]))[:400],
+    }
+
+
 def probe_cmd_wrapper(tmp: Path) -> dict[str, Any]:
     if not IS_WINDOWS:
         return {"skipped": "Windows 아님"}
     dumper = tmp / "dump_args.py"
     dumper.write_text("import sys, json\nprint(json.dumps(sys.argv[1:], ensure_ascii=True))\n", encoding="utf-8")
-    bat_dir = tmp / "dir with space 한글"
-    bat_dir.mkdir()
-    bat = bat_dir / "wrapper.cmd"
     # 받은 인자를 그대로 Python에 넘긴다. gradlew.bat, mvnw.cmd의 "%*" 전달과 같은 방식이다.
-    bat.write_bytes(f'@echo off\r\n"{sys.executable}" "{dumper}" %*\r\n'.encode("mbcs"))
-    out: dict[str, Any] = {"cases": []}
-    for arg in ARG_CASES:
-        argv = ["cmd.exe", "/d", "/s", "/c", str(bat), arg]
-        line = subprocess.list2cmdline(argv)
-        r = run(argv)
-        stdout = text(r["stdout_bytes"]).strip()
-        try:
-            received = json.loads(stdout.splitlines()[0]) if stdout else None
-        except ValueError:
-            received = None
-        out["cases"].append({
-            "sent": arg,
-            "command_line": anonymize(line),
-            "exit_code": r["exit_code"],
-            "received": received,
-            "same": received == [arg] if received is not None else False,
-            "injected": "INJECTED" in stdout.replace(arg, ""),
-            "stdout": anonymize(stdout)[:400],
-            "stderr": anonymize(text(r["stderr_bytes"]))[:400],
-        })
-    # 직접 실행(.cmd를 cmd 없이 Popen)도 비교한다. Python은 내부적으로 cmd.exe를 거친다.
-    direct = []
-    for arg in ("with space", 'quote"inside', "a&echo INJECTED_AMP"):
-        r = run([str(bat), arg])
-        stdout = text(r["stdout_bytes"]).strip()
-        direct.append({"sent": arg, "exit_code": r["exit_code"], "stdout": anonymize(stdout)[:400],
-                       "injected": "INJECTED" in stdout.replace(arg, "")})
-    out["direct_cmd_popen"] = direct
+    body = f'@echo off\r\n"{sys.executable}" "{dumper}" %*\r\n'.encode("mbcs")
+    spaced_dir = tmp / "dir with space 한글"
+    spaced_dir.mkdir()
+    spaced = spaced_dir / "wrapper.cmd"
+    spaced.write_bytes(body)
+    plain_dir = tmp / "plain"
+    plain_dir.mkdir()
+    plain = plain_dir / "wrapper.cmd"
+    plain.write_bytes(body)
+
+    variants: dict[str, Any] = {
+        # A. argv 배열을 subprocess 기본 변환에 맡김. 경로에 공백이 있으면 /s가 맨 앞과 맨 끝 따옴표를 지운다.
+        "argv_spaced_path": lambda a: _wrapper_case(a, argv=["cmd.exe", "/d", "/s", "/c", str(spaced), a]),
+        # B. 같은 argv, 공백 없는 wrapper 경로
+        "argv_plain_path": lambda a: _wrapper_case(a, argv=["cmd.exe", "/d", "/s", "/c", str(plain), a]),
+        # C. /s가 지울 바깥 따옴표를 한 겹 더 씌운 명령 줄을 직접 만든다.
+        "outer_quoted_spaced_path": lambda a: _wrapper_case(
+            a, cmdline=f'cmd.exe /d /s /c ""{spaced}" {subprocess.list2cmdline([a])}"'
+        ),
+    }
+    out: dict[str, Any] = {}
+    for name, fn in variants.items():
+        out[name] = [fn(arg) for arg in ARG_CASES]
+    # D. .cmd를 cmd 없이 Popen에 argv로 넘김. Python이 내부적으로 cmd.exe를 거친다.
+    out["direct_cmd_popen"] = [_wrapper_case(arg, argv=[str(spaced), arg]) for arg in ARG_CASES]
+    out["summary"] = {
+        name: {
+            "same": sum(1 for c in cases if c["same"]),
+            "total": len(cases),
+            "injected": [c["sent"] for c in cases if c["injected"]],
+            "different": [c["sent"] for c in cases if not c["same"]],
+        }
+        for name, cases in out.items()
+    }
     return out
 
 
