@@ -1,0 +1,501 @@
+{
+  "environment": {
+    "probe": "codex-exec",
+    "issue": 4,
+    "started_at": "2026-11-17T13:43:13+09:00",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.15",
+    "codex_path_kind": ".exe",
+    "codex_version": "codex-cli 0.167.0-alpha.3.2",
+    "codex_version_stderr": ""
+  },
+  "checks": {
+    "X0": {
+      "title": "버전과 도움말",
+      "observed": {
+        "version": "codex-cli 0.167.0-alpha.3.2",
+        "help_lines": [
+          "-c, --config <key=value>",
+          "-m, --model <MODEL>",
+          "-s, --sandbox <SANDBOX_MODE>",
+          "-a, --ask-for-approval <APPROVAL_POLICY>"
+        ],
+        "exec_help_lines": [
+          "-c, --config <key=value>",
+          "-m, --model <MODEL>",
+          "-s, --sandbox <SANDBOX_MODE>",
+          "--ephemeral",
+          "--output-schema <FILE>",
+          "--json",
+          "-o, --output-last-message <FILE>"
+        ]
+      }
+    },
+    "X1": {
+      "title": "모델 ID 4개 지정",
+      "observed": {
+        "gpt-6-astra": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 10.197,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:43:15.528032Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "last_message_file_exists": true,
+          "last_message": "OK"
+        },
+        "gpt-6.1-sol": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 7.064,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:43:24.015516Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "last_message_file_exists": true,
+          "last_message": "OK"
+        },
+        "gpt-6.1-terra": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 6.44,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:43:31.083853Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "last_message_file_exists": true,
+          "last_message": "OK"
+        },
+        "gpt-6-luna": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 7.274,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:43:37.677543Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "last_message_file_exists": true,
+          "last_message": "OK"
+        },
+        "invalid_model_id": {
+          "exit_code": 1,
+          "timed_out": false,
+          "seconds": 4.459,
+          "event_types": [
+            "thread.started",
+            "item.completed",
+            "turn.started",
+            "error",
+            "turn.failed"
+          ],
+          "error_events": [
+            {
+              "type": "error",
+              "message": "The 'gpt-probe-nonexistent-0' model is not supported when using Codex with a ChatGPT account."
+            },
+            {
+              "type": "turn.failed",
+              "error": {
+                "message": "The 'gpt-probe-nonexistent-0' model is not supported when using Codex with a ChatGPT account."
+              }
+            }
+          ],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:43:44.698747Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+        }
+      }
+    },
+    "X2": {
+      "title": "sandbox read-only와 workspace-write 실제 차단, -a never",
+      "observed": {
+        "read-only": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 50.103,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "item.started",
+            "item.completed",
+            "item.started",
+            "item.completed",
+            "item.completed",
+            "item.started",
+            "item.completed",
+            "item.started",
+            "item.completed",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:43:49.124102Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n2026-11-17T04:44:06.162903Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: \"Rejected(\\\"Failed to create unified exec process: CreateProcessWithLogonW failed: 267\\\")\" }\n2026-11-17T04:44:06.162899Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: \"Rejected(\\\"Failed to create unified exec process: CreateProcessWithLogonW failed: 267\\\")\" }\n",
+          "last_message_file_exists": true,
+          "last_message": "두 경로에 `hello`를 쓰는 PowerShell 명령을 각각 실행했으나, 모두 실패했습니다.\n\n| 대상 파일 | 결과 | 원인 |\n|---|---|---|\n| 작업 폴더 내부 `probe-inside.txt` | 실패, 종료 코드 `1` | 접근 거부 (`UnauthorizedAccessException`) |\n| 작업 폴더 외부 `sandbox-outside-read-only.txt` | 실패, 종료 코드 `1` | 접근 거부 (`UnauthorizedAccessException`) |\n\n현재 읽기 전용 환경에서 두 경로 모두 쓰기가 거부되었습니다.",
+          "inside_created": false,
+          "outside_created": false,
+          "outside_target": "<결과 폴더>/sandbox-outside-read-only.txt"
+        },
+        "workspace-write": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 39.781,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "item.started",
+            "item.completed",
+            "item.started",
+            "item.completed",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:44:39.519279Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "last_message_file_exists": true,
+          "last_message": "- `<HOME>\\AppData\\Local\\Temp\\aicollab-codex-probe-<RAND>\\ws7\\work\\probe-inside.txt`: **성공**. `hello`를 썼으며 명령 종료 코드는 `0`입니다.\n- `<결과 폴더>\\sandbox-outside-workspace-write.txt`: **실패**. 쓰기 허용 범위 밖의 경로로, 접근이 거부되었습니다(`UnauthorizedAccessException`, 종료 코드 `1`).",
+          "inside_created": true,
+          "outside_created": false,
+          "outside_target": "<결과 폴더>/sandbox-outside-workspace-write.txt"
+        }
+      },
+      "model": "gpt-6-astra"
+    },
+    "X3": {
+      "title": "--output-schema 엄격 규칙과 -o",
+      "observed": {
+        "role_result_schema": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 15.859,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:45:20.048026Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "last_message_file_exists": true,
+          "last_message": "{\n  \"schema_version\": 2,\n  \"kind\": \"plan\",\n  \"status\": \"completed\",\n  \"summary\": \"probe\",\n  \"questions\": [],\n  \"plan\": {\n    \"goal\": \"\",\n    \"criteria\": [],\n    \"steps\": [],\n    \"scope_paths\": [],\n    \"check_ids\": [],\n    \"test_contract\": \"\",\n    \"new_dependencies_required\": false,\n    \"dependency_reason\": \"\"\n  },\n  \"implementation\": {\n    \"description\": \"\",\n    \"changed_paths\": [],\n    \"addressed_criteria\": []\n  },\n  \"review\": {\n    \"criteria\": [],\n    \"findings\": [],\n    \"failure_attribution\": \"not-applicable\",\n    \"repair_targets\": [],\n    \"execution_assessment\": \"not-applicable\"\n  },\n  \"observations\": [],\n  \"testing\": {\n    \"description\": \"\",\n    \"changed_paths\": [],\n    \"covered_criteria\": []\n  }\n}",
+          "last_message_is_json": true,
+          "subset_errors": []
+        },
+        "not_all_required": {
+          "exit_code": 1,
+          "timed_out": false,
+          "seconds": 5.507,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "error",
+            "turn.failed"
+          ],
+          "error_events": [
+            {
+              "type": "error",
+              "message": "{\"type\":\"error\",\"error\":{\"message\":\"Invalid schema for response_format 'codex_output_schema': 'schema.required' is required to include every key in properties. Missing 'extra'.\",\"type\":\"invalid_request_error\",\"param\":\"text.format.schema\",\"code\":\"invalid_json_schema\"},\"status\":400}"
+            },
+            {
+              "type": "turn.failed",
+              "error": {
+                "message": "{\"type\":\"error\",\"error\":{\"message\":\"Invalid schema for response_format 'codex_output_schema': 'schema.required' is required to include every key in properties. Missing 'extra'.\",\"type\":\"invalid_request_error\",\"param\":\"text.format.schema\",\"code\":\"invalid_json_schema\"},\"status\":400}"
+              }
+            }
+          ],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:45:35.781389Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "last_message_file_exists": false,
+          "last_message": null
+        },
+        "extended_keywords": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 7.318,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:45:40.442451Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "last_message_file_exists": true,
+          "last_message": "{\"code\":\"ABC\",\"email\":\"probe@example.com\",\"note\":null}",
+          "last_message_is_json": true,
+          "subset_errors": []
+        }
+      },
+      "model": "gpt-6-astra"
+    },
+    "X4": {
+      "title": "--json 이벤트",
+      "observed": {
+        "summary": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 26.543,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "item.started",
+            "item.completed",
+            "item.started",
+            "item.completed",
+            "item.started",
+            "item.completed",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:45:47.817835Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "last_message_file_exists": true,
+          "last_message": "readme.txt\n\nDONE"
+        },
+        "event_key_sets": [
+          "item,type",
+          "thread_id,type",
+          "type",
+          "type,usage"
+        ],
+        "item_types": [
+          "agent_message",
+          "command_execution"
+        ],
+        "non_json_stdout_lines": []
+      },
+      "model": "gpt-6-astra"
+    },
+    "X5": {
+      "title": "effort 값 이름",
+      "observed": {
+        "minimal": {
+          "exit_code": 1,
+          "timed_out": false,
+          "seconds": 4.086,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "error",
+            "turn.failed"
+          ],
+          "error_events": [
+            {
+              "type": "error",
+              "message": "{\"type\":\"error\",\"error\":{\"message\":\"Unsupported value: 'minimal' is not supported with the 'gpt-6-astra' model. Supported values are: 'low', 'medium', 'high', 'xhigh', and 'max'.\",\"type\":\"invalid_request_error\",\"param\":\"reasoning.effort\",\"code\":\"unsupported_value\"},\"status\":400}"
+            },
+            {
+              "type": "turn.failed",
+              "error": {
+                "message": "{\"type\":\"error\",\"error\":{\"message\":\"Unsupported value: 'minimal' is not supported with the 'gpt-6-astra' model. Supported values are: 'low', 'medium', 'high', 'xhigh', and 'max'.\",\"type\":\"invalid_request_error\",\"param\":\"reasoning.effort\",\"code\":\"unsupported_value\"},\"status\":400}"
+              }
+            }
+          ],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:46:15.212667Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+        },
+        "low": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 7.693,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:46:18.423206Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+        },
+        "medium": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 5.975,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:46:26.136344Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+        },
+        "high": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 7.791,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:46:32.085308Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+        },
+        "xhigh": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 7.366,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:46:40.074726Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+        },
+        "bogus-effort": {
+          "exit_code": 1,
+          "timed_out": false,
+          "seconds": 3.441,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "error",
+            "turn.failed"
+          ],
+          "error_events": [
+            {
+              "type": "error",
+              "message": "{\n  \"type\": \"error\",\n  \"error\": {\n    \"type\": \"invalid_request_error\",\n    \"code\": null,\n    \"message\": \"[ReasoningEffortParam] [reasoning.effort] [invalid_enum_value] Invalid value: 'bogus-effort'. Supported values are: 'none', 'minimal', 'low', 'medium', 'high', 'xhigh', and 'max'.\",\n    \"param\": null\n  },\n  \"status\": 400\n}"
+            },
+            {
+              "type": "turn.failed",
+              "error": {
+                "message": "{\n  \"type\": \"error\",\n  \"error\": {\n    \"type\": \"invalid_request_error\",\n    \"code\": null,\n    \"message\": \"[ReasoningEffortParam] [reasoning.effort] [invalid_enum_value] Invalid value: 'bogus-effort'. Supported values are: 'none', 'minimal', 'low', 'medium', 'high', 'xhigh', and 'max'.\",\n    \"param\": null\n  },\n  \"status\": 400\n}"
+              }
+            }
+          ],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:46:47.371889Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+        }
+      },
+      "model": "gpt-6-astra"
+    },
+    "X6": {
+      "title": "--ephemeral",
+      "observed": {
+        "ephemeral": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 11.678,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:46:50.743588Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "session_files_before": 18,
+          "session_files_after": 18
+        },
+        "not_ephemeral": {
+          "exit_code": 0,
+          "timed_out": false,
+          "seconds": 6.567,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "item.completed",
+            "turn.completed"
+          ],
+          "error_events": [],
+          "stdout_head": null,
+          "stderr_tail": "2026-11-17T04:47:02.387072Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n",
+          "session_files_before": 18,
+          "session_files_after": 19
+        }
+      },
+      "model": "gpt-6-astra",
+      "note": "같은 시간에 다른 codex 세션을 쓰면 개수가 섞인다"
+    },
+    "X7": {
+      "title": "인증 오류 출력 형태",
+      "observed": {
+        "auth_missing_empty_codex_home": {
+          "exit_code": 1,
+          "timed_out": false,
+          "seconds": 16.78,
+          "event_types": [
+            "thread.started",
+            "turn.started",
+            "error",
+            "error",
+            "error",
+            "error",
+            "item.completed",
+            "error",
+            "error",
+            "error",
+            "error",
+            "error",
+            "error",
+            "turn.failed"
+          ],
+          "error_events": [
+            {
+              "type": "error",
+              "message": "Reconnecting... 2/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: <RAY>)"
+            },
+            {
+              "type": "error",
+              "message": "Reconnecting... 3/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: <RAY>)"
+            },
+            {
+              "type": "error",
+              "message": "Reconnecting... 4/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: <RAY>)"
+            },
+            {
+              "type": "error",
+              "message": "Reconnecting... 5/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: <RAY>)"
+            },
+            {
+              "type": "error",
+              "message": "Reconnecting... 1/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: <RAY>, request id: req_<ID>)"
+            }
+          ],
+          "stdout_head": null,
+          "stderr_tail": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"<HOME>\\\\AppData\\\\Local\\\\Temp\\\\\" (codex_home: AbsolutePathBuf(\"<TMP>\\\\empty-codex-home\"))\n2026-11-17T04:47:09.230765Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n2026-11-17T04:47:09.633282Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:09.740854Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:10.075042Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:10.638420Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:11.517186Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:13.285473Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:16.321388Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n"
+        },
+        "rate_limit": "한도 오류는 일부러 만들지 않음. 실행 중 발생하면 raw에 남는다."
+      }
+    }
+  },
+  "note": "codex_exec.py가 만든 results.json이다. 모델 응답과 -o 파일 내용의 홈 경로, 사용자 이름, 임시 폴더 이름, request id, cf-ray를 바꿨다."
+}

@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "codex",
+    "-a",
+    "never",
+    "--sandbox",
+    "read-only",
+    "exec",
+    "--skip-git-repo-check",
+    "-C",
+    "<TMP>\\ws8\\work",
+    "--ephemeral",
+    "-m",
+    "gpt-6-astra",
+    "--json",
+    "-o",
+    "<TMP>\\ws8\\last.txt",
+    "--output-schema",
+    "<TMP>\\ws8\\schema.json",
+    "-"
+  ],
+  "exit_code": 0,
+  "events": [
+    {
+      "type": "thread.started",
+      "thread_id": "<UUID>"
+    },
+    {
+      "type": "turn.started"
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_0",
+        "type": "agent_message",
+        "text": "{\n  \"schema_version\": 2,\n  \"kind\": \"plan\",\n  \"status\": \"completed\",\n  \"summary\": \"probe\",\n  \"questions\": [],\n  \"plan\": {\n    \"goal\": \"\",\n    \"criteria\": [],\n    \"steps\": [],\n    \"scope_paths\": [],\n    \"check_ids\": [],\n    \"test_contract\": \"\",\n    \"new_dependencies_required\": false,\n    \"dependency_reason\": \"\"\n  },\n  \"implementation\": {\n    \"description\": \"\",\n    \"changed_paths\": [],\n    \"addressed_criteria\": []\n  },\n  \"review\": {\n    \"criteria\": [],\n    \"findings\": [],\n    \"failure_attribution\": \"not-applicable\",\n    \"repair_targets\": [],\n    \"execution_assessment\": \"not-applicable\"\n  },\n  \"observations\": [],\n  \"testing\": {\n    \"description\": \"\",\n    \"changed_paths\": [],\n    \"covered_criteria\": []\n  }\n}"
+      }
+    },
+    {
+      "type": "turn.completed",
+      "usage": {
+        "input_tokens": 21074,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 368,
+        "reasoning_output_tokens": 163
+      }
+    }
+  ],
+  "non_json_stdout": [],
+  "stderr": "2026-11-17T04:45:20.048026Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+}

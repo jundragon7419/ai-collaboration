@@ -2,27 +2,31 @@
   "environment": {
     "probe": "git-behavior",
     "issue": 6,
-    "started_at": "2026-11-17T01:16:43+00:00",
+    "started_at": "2026-11-17T02:41:22+00:00",
     "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
     "python": "3.10.12",
     "git_version": "git version 2.34.1",
     "locale_env": {
       "LANG": "C.UTF-8"
-    }
+    },
+    "inherited_git_env_removed": [
+      "GIT_CONFIG_PARAMETERS",
+      "GIT_SSH_COMMAND"
+    ]
   },
   "checks": {
     "G1": {
       "title": "worktree 생성과 정리",
       "observed": {
         "add_exit": 0,
-        "list_porcelain": "worktree <TMP>/g1/repo\nHEAD 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb\nbranch refs/heads/main\n\nworktree <TMP>/g1/wt\nHEAD 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb\nbranch refs/heads/aicollab/run-1",
+        "list_porcelain": "worktree <TMP>/g1/repo\nHEAD 69ef451f5a7aaec33b58a69b1dbe313242059159\nbranch refs/heads/main\n\nworktree <TMP>/g1/wt\nHEAD 69ef451f5a7aaec33b58a69b1dbe313242059159\nbranch refs/heads/aicollab/run-1",
         "duplicate_branch_exit": 255,
         "duplicate_branch_stderr": "fatal: A branch named 'aicollab/run-1' already exists.",
         "remove_with_untracked_exit": 128,
         "remove_with_untracked_stderr": "fatal: '<TMP>/g1/wt' contains modified or untracked files, use --force to delete it",
         "remove_force_exit": 0,
         "branch_kept_after_remove": true,
-        "list_after_manual_delete": "worktree <TMP>/g1/repo\nHEAD 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb\nbranch refs/heads/main\n\nworktree <TMP>/g1/wt3\nHEAD 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb\nbranch refs/heads/aicollab/run-3\nprunable gitdir file points to non-existent location",
+        "list_after_manual_delete": "worktree <TMP>/g1/repo\nHEAD 69ef451f5a7aaec33b58a69b1dbe313242059159\nbranch refs/heads/main\n\nworktree <TMP>/g1/wt3\nHEAD 69ef451f5a7aaec33b58a69b1dbe313242059159\nbranch refs/heads/aicollab/run-3\nprunable gitdir file points to non-existent location",
         "prune_after_manual_delete": "Removing worktrees/wt3: gitdir file points to non-existent location"
       }
     },
@@ -31,7 +35,7 @@
       "observed": {
         "commit_exit": 0,
         "hook_log_add_and_commit": [
-          "post-checkout pwd=<TMP>/g2/wt git_dir= args=0000000000000000000000000000000000000000 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb 1",
+          "post-checkout pwd=<TMP>/g2/wt git_dir= args=0000000000000000000000000000000000000000 69ef451f5a7aaec33b58a69b1dbe313242059159 1",
           "pre-commit pwd=<TMP>/g2/wt git_dir=<TMP>/g2/repo/.git/worktrees/wt args=",
           "commit-msg pwd=<TMP>/g2/wt git_dir=<TMP>/g2/repo/.git/worktrees/wt args=<TMP>/g2/repo/.git/worktrees/wt/COMMIT_EDITMSG",
           "post-commit pwd=<TMP>/g2/wt git_dir=<TMP>/g2/repo/.git/worktrees/wt args="
@@ -88,7 +92,7 @@
           "exit_code": -9,
           "timed_out": true,
           "stderr": "",
-          "seconds": 5.007,
+          "seconds": 5.008,
           "head_moved": false,
           "index_lock_left": false
         },

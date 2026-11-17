@@ -1,0 +1,42 @@
+{
+  "argv": [
+    "codex",
+    "-a",
+    "never",
+    "--sandbox",
+    "read-only",
+    "exec",
+    "--skip-git-repo-check",
+    "-C",
+    "<TMP>\\ws17\\work",
+    "--ephemeral",
+    "-m",
+    "gpt-6-astra",
+    "--json",
+    "-c",
+    "model_reasoning_effort=\"bogus-effort\"",
+    "-"
+  ],
+  "exit_code": 1,
+  "events": [
+    {
+      "type": "thread.started",
+      "thread_id": "<UUID>"
+    },
+    {
+      "type": "turn.started"
+    },
+    {
+      "type": "error",
+      "message": "{\n  \"type\": \"error\",\n  \"error\": {\n    \"type\": \"invalid_request_error\",\n    \"code\": null,\n    \"message\": \"[ReasoningEffortParam] [reasoning.effort] [invalid_enum_value] Invalid value: 'bogus-effort'. Supported values are: 'none', 'minimal', 'low', 'medium', 'high', 'xhigh', and 'max'.\",\n    \"param\": null\n  },\n  \"status\": 400\n}"
+    },
+    {
+      "type": "turn.failed",
+      "error": {
+        "message": "{\n  \"type\": \"error\",\n  \"error\": {\n    \"type\": \"invalid_request_error\",\n    \"code\": null,\n    \"message\": \"[ReasoningEffortParam] [reasoning.effort] [invalid_enum_value] Invalid value: 'bogus-effort'. Supported values are: 'none', 'minimal', 'low', 'medium', 'high', 'xhigh', and 'max'.\",\n    \"param\": null\n  },\n  \"status\": 400\n}"
+      }
+    }
+  ],
+  "non_json_stdout": [],
+  "stderr": "2026-11-17T04:46:47.371889Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+}

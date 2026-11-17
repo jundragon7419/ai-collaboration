@@ -2,28 +2,51 @@
   "environment": {
     "probe": "prepare-behavior",
     "issue": 7,
-    "started_at": "2026-11-17T10:24:22+09:00",
-    "platform": "Linux-6.18.44-fc-v509-x86_64-with-glibc2.39",
+    "started_at": "2026-11-17T11:40:48+09:00",
+    "platform": "Linux-6.18.44-fc-v553-x86_64-with-glibc2.39",
     "python": "3.13.18",
     "git": "git version 2.43.0",
     "uv": "uv 0.11.32 (x86_64-unknown-linux-gnu)",
     "node": "v22.23.4",
-    "npm": "10.9.9"
+    "npm": "10.9.9",
+    "inherited_env_names": {
+      "git": [
+        "GIT_ASKPASS",
+        "GIT_CONFIG_COUNT",
+        "GIT_CONFIG_KEY_0",
+        "GIT_CONFIG_KEY_1",
+        "GIT_CONFIG_KEY_2",
+        "GIT_CONFIG_VALUE_0",
+        "GIT_CONFIG_VALUE_1",
+        "GIT_CONFIG_VALUE_2",
+        "GIT_EDITOR",
+        "GIT_SSL_CAINFO",
+        "GIT_TERMINAL_PROMPT"
+      ],
+      "uv": [],
+      "npm": [
+        "NPM_CONFIG_USERCONFIG",
+        "npm_config_fetch_retry_mintimeout",
+        "npm_config_https_proxy",
+        "npm_config_noproxy"
+      ]
+    }
   },
   "checks": {
     "UV": {
       "title": "uv sync",
       "observed": {
         "uv_lock_create_exit": 0,
+        "inherited_vars_removed": [],
         "U1_sync_with_lock": {
           "command": [
             "uv",
             "sync"
           ],
           "exit_code": 0,
-          "seconds": 0.036,
+          "seconds": 0.033,
           "stdout_tail": "",
-          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 2 packages in 1ms\nInstalled 1 package in 2ms\n + six==1.16.0\n",
+          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 2 packages in 1ms\nInstalled 1 package in 1ms\n + six==1.16.0\n",
           "source_diff": {
             "added": [],
             "removed": [],
@@ -59,9 +82,9 @@
             "sync"
           ],
           "exit_code": 0,
-          "seconds": 0.069,
+          "seconds": 0.055,
           "stdout_tail": "",
-          "stderr_tail": "Resolved 2 packages in 1ms\nChecked 1 package in 0.05ms\n",
+          "stderr_tail": "Resolved 2 packages in 1ms\nChecked 1 package in 0.09ms\n",
           "source_diff": {
             "added": [],
             "removed": [],
@@ -106,9 +129,9 @@
             "sync"
           ],
           "exit_code": 0,
-          "seconds": 0.033,
+          "seconds": 0.034,
           "stdout_tail": "",
-          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 2 packages in 2ms\nInstalled 1 package in 0.90ms\n + six==1.16.0\n",
+          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 2 packages in 3ms\nInstalled 1 package in 1ms\n + six==1.16.0\n",
           "source_diff": {
             "added": [
               "uv.lock"
@@ -147,7 +170,7 @@
             "--locked"
           ],
           "exit_code": 2,
-          "seconds": 0.028,
+          "seconds": 0.031,
           "stdout_tail": "",
           "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nerror: Unable to find lockfile at `uv.lock`, but `--locked` was provided. To create a lockfile, run `uv lock` or `uv sync` without the flag.\n",
           "source_diff": {
@@ -182,9 +205,9 @@
             "sync"
           ],
           "exit_code": 0,
-          "seconds": 0.037,
+          "seconds": 0.04,
           "stdout_tail": "",
-          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 3 packages in 5ms\nInstalled 2 packages in 2ms\n + idna==3.7\n + six==1.16.0\n",
+          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 3 packages in 3ms\nInstalled 2 packages in 1ms\n + idna==3.7\n + six==1.16.0\n",
           "source_diff": {
             "added": [],
             "removed": [],
@@ -223,9 +246,9 @@
             "--locked"
           ],
           "exit_code": 1,
-          "seconds": 0.03,
+          "seconds": 0.032,
           "stdout_tail": "",
-          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 3 packages in 4ms\nerror: The lockfile at `uv.lock` needs to be updated, but `--locked` was provided.\n\nhint: To update the lockfile, run `uv lock`.\n",
+          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 3 packages in 3ms\nerror: The lockfile at `uv.lock` needs to be updated, but `--locked` was provided.\n\nhint: To update the lockfile, run `uv lock`.\n",
           "source_diff": {
             "added": [],
             "removed": [],
@@ -261,7 +284,7 @@
             "--frozen"
           ],
           "exit_code": 0,
-          "seconds": 0.047,
+          "seconds": 0.038,
           "stdout_tail": "",
           "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nInstalled 1 package in 2ms\n + six==1.16.0\n",
           "source_diff": {
@@ -293,16 +316,16 @@
           ]
         },
         "U4_lock_with_broken_exit": 0,
-        "U4_lock_with_broken_stderr": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nResolved 3 packages in 5ms\nAdded broken-pkg v0.0.1\n",
+        "U4_lock_with_broken_stderr": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nResolved 3 packages in 3ms\nAdded broken-pkg v0.0.1\n",
         "U4_sync_build_failure": {
           "command": [
             "uv",
             "sync"
           ],
           "exit_code": 1,
-          "seconds": 0.387,
+          "seconds": 0.319,
           "stdout_tail": "",
-          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 3 packages in 2ms\n   Building broken-pkg @ file://<TMP>/uv/broken-pkg\n  × Failed to build `broken-pkg @\n  │ file://<TMP>/uv/broken-pkg`\n  ├─▶ The build backend returned an error\n  ╰─▶ Call to `setuptools.build_meta.build_wheel` failed (exit status: 1)\n\n      [stderr]\n      probe: intentional build failure\n\n\nhint: `broken-pkg` was included because `probe-app` (v0.1.0) depends on `broken-pkg`\nhint: Build failures usually indicate a problem with the package or the build environment",
+          "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\nResolved 3 packages in 1ms\n   Building broken-pkg @ file://<TMP>/uv/broken-pkg\n  × Failed to build `broken-pkg @\n  │ file://<TMP>/uv/broken-pkg`\n  ├─▶ The build backend returned an error\n  ╰─▶ Call to `setuptools.build_meta.build_wheel` failed (exit status: 1)\n\n      [stderr]\n      probe: intentional build failure\n\n\nhint: `broken-pkg` was included because `probe-app` (v0.1.0) depends on `broken-pkg`\nhint: Build failures usually indicate a problem with the package or the build environment",
           "source_diff": {
             "added": [],
             "removed": [],
@@ -338,7 +361,7 @@
             "sync"
           ],
           "exit_code": 1,
-          "seconds": 0.253,
+          "seconds": 0.114,
           "stdout_tail": "",
           "stderr_tail": "Using CPython 3.13.18 interpreter at: /usr/local/bin/python3\nCreating virtual environment at: .venv\n  × No solution found when resolving dependencies:\n  ╰─▶ Because aicollab-probe-nonexistent-package-zz was not\n      found in the package registry and your project depends on\n      aicollab-probe-nonexistent-package-zz==9.9.9, we can conclude that your\n      project's requirements are unsatisfiable.\n",
           "source_diff": {
@@ -375,14 +398,15 @@
       "title": "npm ci",
       "observed": {
         "package_lock_only_exit": 0,
+        "inherited_vars_removed": [],
         "N1_ci_with_lock": {
           "command": [
             "npm",
             "ci"
           ],
           "exit_code": 0,
-          "seconds": 0.24,
-          "stdout_tail": "\nadded 1 package in 189ms\n",
+          "seconds": 0.211,
+          "stdout_tail": "\nadded 1 package in 166ms\n",
           "stderr_tail": "",
           "source_diff": {
             "added": [],
@@ -413,8 +437,8 @@
             "ci"
           ],
           "exit_code": 0,
-          "seconds": 0.234,
-          "stdout_tail": "\nadded 1 package in 183ms\n",
+          "seconds": 0.224,
+          "stdout_tail": "\nadded 1 package in 175ms\n",
           "stderr_tail": "",
           "source_diff": {
             "added": [],
@@ -450,7 +474,7 @@
             "ci"
           ],
           "exit_code": 1,
-          "seconds": 0.212,
+          "seconds": 0.193,
           "stdout_tail": "",
           "stderr_tail": "npm error code EUSAGE\nnpm error\nnpm error The `npm ci` command can only install with an existing package-lock.json or\nnpm error npm-shrinkwrap.json with lockfileVersion >= 1. Run an install with npm@5 or\nnpm error later to generate a package-lock.json file, then try again.\nnpm error\nnpm error Clean install a project\nnpm error\nnpm error Usage:\nnpm error npm ci\nnpm error\nnpm error Options:\nnpm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]\nnpm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]\nnpm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]\nnpm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]\nnpm error [--no-bin-links] [--no-fund] [--dry-run]\nnpm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]\nnpm error [-ws|--workspaces] [--include-workspace-root] [--install-links]\nnpm error\nnpm error aliases: clean-install, ic, install-clean, isntall-clean\nnpm error\nnpm error Run \"npm help ci\" for more info\nnpm error A complete log of this run can be found in: <NPM_LOG>\n",
           "source_diff": {
@@ -473,7 +497,7 @@
             "ci"
           ],
           "exit_code": 1,
-          "seconds": 0.254,
+          "seconds": 0.316,
           "stdout_tail": "",
           "stderr_tail": "npm error code EUSAGE\nnpm error\nnpm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.\nnpm error\nnpm error Missing: is-odd@3.0.1 from lock file\nnpm error Missing: is-number@6.0.0 from lock file\nnpm error\nnpm error Clean install a project\nnpm error\nnpm error Usage:\nnpm error npm ci\nnpm error\nnpm error Options:\nnpm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]\nnpm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]\nnpm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]\nnpm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]\nnpm error [--no-bin-links] [--no-fund] [--dry-run]\nnpm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]\nnpm error [-ws|--workspaces] [--include-workspace-root] [--install-links]\nnpm error\nnpm error aliases: clean-install, ic, install-clean, isntall-clean\nnpm error\nnpm error Run \"npm help ci\" for more info\nnpm error A complete log of this run can be found in: <NPM_LOG>\n",
           "source_diff": {
@@ -498,8 +522,8 @@
             "ci"
           ],
           "exit_code": 0,
-          "seconds": 0.312,
-          "stdout_tail": "\n> probe-app@0.1.0 preinstall\n> node -e \"require('fs').appendFileSync('src.txt','preinstall\\\\n')\"\n\n\n> probe-app@0.1.0 postinstall\n> node -e \"require('fs').appendFileSync('src.txt','postinstall\\\\n');require('fs').writeFileSync('generated.txt','x\\\\n')\"\n\n\n> probe-app@0.1.0 prepare\n> node -e \"require('fs').appendFileSync('src.txt','prepare\\\\n')\"\n\n\nadded 1 package in 257ms\n",
+          "seconds": 0.315,
+          "stdout_tail": "\n> probe-app@0.1.0 preinstall\n> node -e \"require('fs').appendFileSync('src.txt','preinstall\\\\n')\"\n\n\n> probe-app@0.1.0 postinstall\n> node -e \"require('fs').appendFileSync('src.txt','postinstall\\\\n');require('fs').writeFileSync('generated.txt','x\\\\n')\"\n\n\n> probe-app@0.1.0 prepare\n> node -e \"require('fs').appendFileSync('src.txt','prepare\\\\n')\"\n\n\nadded 1 package in 262ms\n",
           "stderr_tail": "",
           "source_diff": {
             "added": [
@@ -537,7 +561,7 @@
             "ci"
           ],
           "exit_code": 7,
-          "seconds": 0.267,
+          "seconds": 0.252,
           "stdout_tail": "\n> probe-app@0.1.0 postinstall\n> node -e \"process.exit(7)\"\n\n",
           "stderr_tail": "npm error code 7\nnpm error path <TMP>/npm/wt6\nnpm error command failed\nnpm error command sh -c node -e \"process.exit(7)\"\nnpm error A complete log of this run can be found in: <NPM_LOG>\n",
           "source_diff": {
@@ -570,7 +594,7 @@
             "ci"
           ],
           "exit_code": 1,
-          "seconds": 0.321,
+          "seconds": 0.393,
           "stdout_tail": "",
           "stderr_tail": "npm error code E404\nnpm error 404 Not Found - GET https://registry.npmjs.org/is-number/-/is-number-99.99.99.tgz - Not found\nnpm error 404\nnpm error 404  'is-number@https://registry.npmjs.org/is-number/-/is-number-99.99.99.tgz' is not in this registry.\nnpm error 404\nnpm error 404 Note that you can also install from a\nnpm error 404 tarball, folder, http url, or git url.\nnpm error A complete log of this run can be found in: <NPM_LOG>\n",
           "source_diff": {
@@ -593,5 +617,5 @@
     }
   },
   "script_errors": {},
-  "note": "prepare_behavior.py가 만든 results.json 그대로다. stdout과 stderr는 끝부분 4000자만 남겼다."
+  "note": "prepare_behavior.py가 만든 results.json 그대로다. stdout과 stderr는 끝부분 4000자만 남겼다. 상속 환경 변수는 이름만 기록했다."
 }
