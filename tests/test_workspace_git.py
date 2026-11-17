@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from workspace_audit_support import git, isolated_environ, make_repo
+from workspace_audit_support import git, isolated_environ, make_repo, run_root
 
 from aicollab.workspace.git import (
     UNPARSED_CONFIG_KEY,
@@ -120,7 +120,9 @@ def test_inherited_git_dir_does_not_redirect_the_run(tmp_path: Path) -> None:
         "GIT_INDEX_FILE": str(tmp_path / "stray.index"),
     }
 
-    workspace = create_run_workspace(target, "run-env", environ=inherited)
+    workspace = create_run_workspace(
+        target, "run-env", run_root=run_root(tmp_path), environ=inherited
+    )
 
     assert workspace.environment.removed_location_vars == (
         "GIT_DIR",

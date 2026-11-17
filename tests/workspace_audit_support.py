@@ -23,6 +23,11 @@ def isolated_environ(tmp_path: Path) -> dict[str, str]:
     return env
 
 
+def run_root(tmp_path: Path) -> Path:
+    """원본 저장소 밖의 run_root. 설정의 project.run_root 자리다."""
+    return tmp_path / "state" / "aicollab" / "runs"
+
+
 def git(cwd: Path, env: dict[str, str], *args: str) -> str:
     proc = subprocess.run(["git", *args], cwd=cwd, env=env, capture_output=True, check=True)
     return proc.stdout.decode("utf-8", "replace").strip()
@@ -39,7 +44,7 @@ def make_repo(path: Path, env: dict[str, str], files: dict[str, bytes | str] | N
     git(path, env, "init", "-q")
     content: dict[str, bytes | str] = {
         ".gitattributes": "* text=auto eol=lf\n",
-        ".gitignore": "node_modules/\n.venv/\n.aicollab/runs/\n",
+        ".gitignore": "node_modules/\n.venv/\n",
         "src/app.py": "print('base')\n",
         "tests/test_app.py": "def test_base():\n    assert True\n",
         "pyproject.toml": '[project]\nname = "sample"\n',

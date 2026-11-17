@@ -6,6 +6,7 @@ reset, clean을 하지 않는다. worktree는 작업 분리이며 보안 격리�
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -24,7 +25,6 @@ from aicollab.workspace.git import (
     split_nul,
 )
 
-RUNS_DIR = ".aicollab/runs"
 BRANCH_PREFIX = "aicollab/"
 TRUSTED_LOCAL_NOTICE = (
     "trusted-local: 본인 저장소의 AI 실수 탐지용. 악의적 저장소와 prompt injection 방어 "
@@ -55,7 +55,7 @@ class OriginEntry:
 
 @dataclass(frozen=True)
 class OriginState:
-    """원본 저장소의 HEAD와 미커밋 변경. run 제어 영역은 뺀다."""
+    """원본 저장소의 HEAD와 미커밋 변경."""
 
     head_oid: str
     branch: str | None
@@ -111,7 +111,7 @@ def _parse_status(output: bytes) -> list[tuple[str, str]]:
     return result
 
 
-def inspect_origin(git: Git, exclude_prefixes: tuple[str, ...] = ()) -> OriginState:
+def inspect_origin(git: Git) -> OriginState:
     """원본 저장소 상태를 읽는다. `--no-optional-locks`로 원본 index를 갱신하지 않는다."""
     head = git.line("rev-parse", "--verify", "HEAD^{commit}")
     symbolic = git.run("symbolic-ref", "--quiet", "--short", "HEAD", check=False)
@@ -126,8 +126,6 @@ def inspect_origin(git: Git, exclude_prefixes: tuple[str, ...] = ()) -> OriginSt
     ).stdout
     entries: list[OriginEntry] = []
     for xy, path in _parse_status(status):
-        if any(path.startswith(prefix) for prefix in exclude_prefixes):
-            continue
         try:
             info = os.lstat(git.cwd / path.rstrip("/"))
             size, mtime_ns = info.st_size, info.st_mtime_ns
@@ -138,21 +136,60 @@ def inspect_origin(git: Git, exclude_prefixes: tuple[str, ...] = ()) -> OriginSt
     return OriginState(head, branch, tuple(entries))
 
 
-def default_run_dir(origin: Path, run_id: str) -> Path:
-    return origin / RUNS_DIR / run_id
+def run_dir(run_root: Path, run_id: str) -> Path:
+    return run_root / run_id
 
 
-def default_worktree_path(origin: Path, run_id: str) -> Path:
-    return default_run_dir(origin, run_id) / "worktree"
+def worktree_path(run_root: Path, run_id: str) -> Path:
+    return run_dir(run_root, run_id) / "worktree"
 
 
-def default_audit_dir(origin: Path, run_id: str, sequence: int, role: str) -> Path:
-    return default_run_dir(origin, run_id) / "audit" / f"{sequence:03d}-{role}"
+def audit_dir(run_root: Path, run_id: str, sequence: int, role: str) -> Path:
+    return run_dir(run_root, run_id) / "audit" / f"{sequence:03d}-{role}"
+
+
+def _path_key(path: Path) -> Path:
+    """실제 경로로 푼 뒤 비교용으로 정규화한다. Windows에서는 대소문자와 구분자를 맞춘다."""
+    return Path(os.path.normcase(str(path.resolve())))
+
+
+def _overlaps(a: Path, b: Path) -> bool:
+    """두 경로가 같거나 한쪽이 다른 쪽 안에 있다."""
+    return a == b or a.is_relative_to(b) or b.is_relative_to(a)
+
+
+def _git_common_dir(git: Git) -> Path:
+    raw = git.run("rev-parse", "--git-common-dir").stdout.rstrip(b"\r\n")
+    common = Path(decode_path(raw))
+    return common if common.is_absolute() else git.cwd / common
+
+
+def validate_run_root(run_root: Path, run_id: str, git: Git) -> Path:
+    """run_root가 project.run_root의 조건을 지키는지 확인하고 run 폴더 경로를 돌려준다.
+
+    조건(docs/02-config-spec.md): 원본 checkout과 공유 Git 관리 경로 밖 절대 경로.
+    git.cwd는 원본 작업 트리의 최상위 폴더다. 비교는 실제 경로 기준이다.
+    """
+    if not run_root.is_absolute():
+        raise WorkspaceError(f"run_root는 절대 경로여야 합니다: {run_root}")
+    root_key = _path_key(run_root)
+    top_key = _path_key(git.cwd)
+    common_key = _path_key(_git_common_dir(git))
+    if root_key == top_key or root_key.is_relative_to(top_key):
+        raise WorkspaceError(f"run_root가 원본 작업 트리 안에 있습니다: {run_root}")
+    if root_key == common_key or root_key.is_relative_to(common_key):
+        raise WorkspaceError(f"run_root가 공유 Git 관리 경로 안에 있습니다: {run_root}")
+    target = run_dir(run_root, run_id)
+    target_key = _path_key(target)
+    if _overlaps(target_key, top_key) or _overlaps(target_key, common_key):
+        raise WorkspaceError(f"run 폴더가 원본 작업 트리나 공유 Git 관리 경로와 겹칩니다: {target}")
+    return target
 
 
 @dataclass(frozen=True)
 class RunWorkspace:
     origin: Path
+    run_root: Path
     path: Path
     run_id: str
     branch: str
@@ -162,11 +199,17 @@ class RunWorkspace:
     origin_state: OriginState
     environment: GitEnvironment
     warnings: tuple[str, ...]
-    exclude_prefixes: tuple[str, ...]
 
     @property
     def git(self) -> Git:
         return Git(self.path, self.environment)
+
+    @property
+    def run_dir(self) -> Path:
+        return run_dir(self.run_root, self.run_id)
+
+    def audit_dir(self, sequence: int, role: str) -> Path:
+        return audit_dir(self.run_root, self.run_id, sequence, role)
 
     @property
     def origin_git(self) -> Git:
@@ -174,7 +217,7 @@ class RunWorkspace:
 
     def origin_changes(self) -> tuple[str, ...]:
         """run 시작 뒤 원본 저장소에서 달라진 점. 비어 있으면 그대로다."""
-        now = inspect_origin(self.origin_git, self.exclude_prefixes)
+        now = inspect_origin(self.origin_git)
         before = self.origin_state
         changes: list[str] = []
         if now.head_oid != before.head_oid:
@@ -192,6 +235,7 @@ class RunWorkspace:
         return {
             "run_id": self.run_id,
             "origin": str(self.origin),
+            "run_root": str(self.run_root),
             "worktree": str(self.path),
             "branch": self.branch,
             "base_oid": self.base_oid,
@@ -214,14 +258,6 @@ def _warn_head(state: OriginState) -> str | None:
     )
 
 
-def _relative_prefix(top: Path, target: Path) -> str | None:
-    try:
-        relative = target.resolve().relative_to(top.resolve())
-    except ValueError:
-        return None
-    return relative.as_posix() + "/"
-
-
 def _resolve_origin(origin: Path, environment: GitEnvironment) -> tuple[Path, str]:
     probe = Git(origin, environment)
     top = probe.run("rev-parse", "--show-toplevel", check=False)
@@ -242,15 +278,16 @@ def create_run_workspace(
     origin: Path,
     run_id: str,
     *,
-    worktree_path: Path | None = None,
-    record_path: Path | None = None,
+    run_root: Path,
     environ: Mapping[str, str] | None = None,
 ) -> RunWorkspace:
     """시작 시 해석한 HEAD commit OID에서 `aicollab/<run_id>` worktree를 만든다.
 
-    worktree_path의 기본값은 `<원본>/.aicollab/runs/<run_id>/worktree`다. 만든 뒤 worktree의
-    source가 고정 HEAD와 같은지, 원본 저장소가 그대로인지 확인한다. 다르면 worktree를
-    남겨 둔 채 WorkspaceError를 낸다. 기록은 record_path(기본 run 폴더의 workspace.json)에 쓴다.
+    worktree는 `<run_root>/<run_id>/worktree`에 만든다. run_root는 설정의 project.run_root이며
+    원본 작업 트리와 공유 Git 관리 경로 밖의 절대 경로여야 한다. 조건을 어기면 worktree를
+    만들기 전에 거부한다. 만든 뒤 worktree의 source가 고정 HEAD와 같은지, 원본 저장소가
+    그대로인지 확인한다. 다르면 worktree를 남겨 둔 채 WorkspaceError를 낸다. 기록은
+    `<run_root>/<run_id>/workspace.json`에 쓴다.
     """
     if not _RUN_ID.fullmatch(run_id):
         raise WorkspaceError(f"run_id에 쓸 수 없는 문자가 있습니다: {run_id!r}")
@@ -261,27 +298,26 @@ def create_run_workspace(
     if git.run("check-ref-format", "--branch", branch, check=False).returncode != 0:
         raise WorkspaceError(f"branch 이름으로 쓸 수 없는 run_id입니다: {run_id!r}")
 
-    path = worktree_path if worktree_path is not None else default_worktree_path(top, run_id)
-    path = path if path.is_absolute() else Path.cwd() / path
-    if path.exists():
-        raise WorkspaceError(f"worktree 경로가 이미 있습니다. 덮어쓰지 않습니다: {path}")
-    prefixes = [RUNS_DIR + "/"]
-    inside = _relative_prefix(top, path)
-    if inside is not None:
-        prefixes.append(inside)
-    exclude = tuple(prefixes)
+    target = validate_run_root(run_root, run_id, git)
+    if target.exists():
+        raise WorkspaceError(f"run 폴더가 이미 있습니다. 덮어쓰지 않습니다: {target}")
+    path = worktree_path(run_root, run_id)
 
-    origin_state = inspect_origin(git, exclude)
+    origin_state = inspect_origin(git)
     warnings = [TRUSTED_LOCAL_NOTICE, *environment.warnings()]
     warn_head = _warn_head(origin_state)
     if warn_head is not None:
         warnings.append(warn_head)
 
-    path.parent.mkdir(parents=True, exist_ok=True)
+    target.mkdir(parents=True)
     try:
         # 같은 이름의 branch가 있으면 실패한다. 기존 branch를 덮어쓰지 않는다.
         git.run("worktree", "add", "-b", branch, str(path), base_oid)
     except GitError as exc:
+        if not path.exists():
+            # worktree가 생기지 않았으면 방금 만든 빈 run 폴더만 지운다.
+            with contextlib.suppress(OSError):
+                target.rmdir()
         raise WorkspaceError(f"run worktree를 만들지 못했습니다: {exc}") from exc
 
     worktree_git = Git(path, environment)
@@ -298,6 +334,7 @@ def create_run_workspace(
 
     workspace = RunWorkspace(
         origin=top,
+        run_root=run_root,
         path=path,
         run_id=run_id,
         branch=branch,
@@ -307,7 +344,6 @@ def create_run_workspace(
         origin_state=origin_state,
         environment=environment,
         warnings=tuple(warnings),
-        exclude_prefixes=exclude,
     )
     changed = workspace.origin_changes()
     if changed:
@@ -316,13 +352,7 @@ def create_run_workspace(
             + ", ".join(changed),
             preserved_path=path,
         )
-    target = (
-        record_path
-        if record_path is not None
-        else default_run_dir(top, run_id) / ("workspace.json")
-    )
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
+    (target / "workspace.json").write_text(
         json.dumps(workspace.record(), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
         newline="\n",

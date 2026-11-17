@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from workspace_audit_support import git, isolated_environ, make_repo, write
+from workspace_audit_support import git, isolated_environ, make_repo, run_root, write
 
 from aicollab.audit.role import AuditResult, audit_role
 from aicollab.audit.scope import RoleScope, dependency_kind
-from aicollab.workspace.worktree import RunWorkspace, create_run_workspace, default_audit_dir
+from aicollab.workspace.worktree import RunWorkspace, create_run_workspace
 
 CODER = RoleScope(role="coder", allowed=("src/", "tests/"))
 TESTER = RoleScope(role="tester", allowed=("tests/",))
@@ -22,12 +22,11 @@ TESTER_FLOW_CODER = RoleScope(role="coder", allowed=("src/", "tests/"), denied=(
 def _workspace(tmp_path: Path, files: dict[str, bytes | str] | None = None) -> RunWorkspace:
     env = isolated_environ(tmp_path)
     origin = make_repo(tmp_path / "origin", env, files)
-    return create_run_workspace(origin, "run-1", environ=env)
+    return create_run_workspace(origin, "run-1", run_root=run_root(tmp_path), environ=env)
 
 
 def _audit(ws: RunWorkspace, scope: RoleScope, sequence: int = 1) -> AuditResult:
-    record_dir = default_audit_dir(ws.origin, ws.run_id, sequence, scope.role)
-    return audit_role(ws.git, ws.baseline, scope, record_dir)
+    return audit_role(ws.git, ws.baseline, scope, ws.audit_dir(sequence, scope.role))
 
 
 def _summary(result: AuditResult) -> dict[str, Any]:
@@ -47,8 +46,7 @@ def test_change_inside_scope_passes_and_is_recorded(tmp_path: Path) -> None:
     result = _audit(ws, CODER)
 
     assert result.ok
-    expected_dir = ws.origin / ".aicollab" / "runs" / "run-1" / "audit" / "001-coder"
-    assert result.record_dir == expected_dir
+    assert result.record_dir == run_root(tmp_path) / "run-1" / "audit" / "001-coder"
     summary = _summary(result)
     assert summary["violations"] == []
     assert summary["workspace_restored"] is False
@@ -60,8 +58,11 @@ def test_change_inside_scope_passes_and_is_recorded(tmp_path: Path) -> None:
     assert (result.record_dir / "before.manifest.json").is_file()
     assert (result.record_dir / "after.manifest.json").is_file()
     assert not (result.record_dir / "changes.patch").exists()
-    # 원본 저장소는 그대로다. 기록은 ignore된 run 제어 영역에만 생긴다.
+    # 원본 저장소는 그대로다. 기록은 run_root 아래에만 생긴다.
     assert ws.origin_changes() == ()
+    env = dict(ws.environment.env)
+    assert git(ws.origin, env, "status", "--porcelain", "--untracked-files=all") == ""
+    assert not (ws.origin / ".aicollab").exists()
 
 
 def test_out_of_scope_change_is_detected_and_evidence_is_preserved(tmp_path: Path) -> None:
@@ -104,6 +105,8 @@ def test_out_of_scope_change_is_detected_and_evidence_is_preserved(tmp_path: Pat
     assert git(ws.path, env, "rev-parse", "HEAD") == ws.base_oid
     assert (ws.origin / "docs" / "guide.md").read_bytes() == b"guide\n"
     assert ws.origin_changes() == ()
+    assert git(ws.origin, env, "status", "--porcelain", "--untracked-files=all") == ""
+    assert result.record_dir.is_relative_to(run_root(tmp_path))
 
     # 작업 공간이 나중에 바뀌어도 증거는 남는다.
     write(ws.path / "docs" / "guide.md", "changed again\n")
@@ -217,8 +220,7 @@ def test_second_role_is_compared_with_its_own_start(tmp_path: Path) -> None:
     first = _audit(ws, CODER, 1)
     assert first.ok
     write(ws.path / "tests" / "test_more.py", "def test_more():\n    assert True\n")
-    record_dir = default_audit_dir(ws.origin, ws.run_id, 2, "tester")
-    second = audit_role(ws.git, first.comparison.after, TESTER, record_dir)
+    second = audit_role(ws.git, first.comparison.after, TESTER, ws.audit_dir(2, "tester"))
     assert second.ok
     assert [c.path for c in second.comparison.changes] == ["tests/test_more.py"]
 

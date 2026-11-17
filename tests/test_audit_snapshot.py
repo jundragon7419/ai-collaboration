@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from workspace_audit_support import git, isolated_environ, make_repo, write
+from workspace_audit_support import git, isolated_environ, make_repo, run_root, write
 
 from aicollab.audit.compare import compare_snapshots
 from aicollab.audit.snapshot import SnapshotUnstableError, take_snapshot
@@ -18,13 +18,7 @@ from aicollab.workspace.worktree import RunWorkspace, create_run_workspace
 def _workspace(tmp_path: Path, files: dict[str, bytes | str] | None = None) -> RunWorkspace:
     env = isolated_environ(tmp_path)
     origin = make_repo(tmp_path / "origin", env, files)
-    return create_run_workspace(
-        origin,
-        "run-1",
-        worktree_path=tmp_path / "wt",
-        record_path=tmp_path / "ws.json",
-        environ=env,
-    )
+    return create_run_workspace(origin, "run-1", run_root=run_root(tmp_path), environ=env)
 
 
 def test_unchanged_workspace_has_same_manifest_and_tree(tmp_path: Path) -> None:
