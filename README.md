@@ -30,3 +30,7 @@ aicollab run "빈 입력일 때 오류를 반환하도록 parser 수정"
 ## 라이선스
 
 [MIT](LICENSE)
+
+## 기획 문서
+
+[기획 문서 목록](docs/README.md)과 [결정 기록](docs/decisions.md)을 기준으로 작업합니다.

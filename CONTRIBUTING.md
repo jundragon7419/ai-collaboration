@@ -129,3 +129,7 @@ PR은 메인테이너가 "Squash and merge"로 합칩니다. PR 제목이 `devel
 ## 라이선스
 
 기여한 코드는 이 저장소의 [MIT 라이선스](LICENSE)를 따르는 것에 동의한 것으로 봅니다.
+
+## 기획 문서
+
+[기획 문서 목록](docs/README.md)과 [결정 기록](docs/decisions.md)을 기준으로 작업합니다.
