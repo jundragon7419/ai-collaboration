@@ -116,8 +116,20 @@ prepare의 등록 명령을 실행하기 전에, 오케스트레이터가 lock �
 
 ## 남은 결정
 
-남은 결정 없음. 기준일: 2026-11-17.
+기준일: 2026-11-17.
+
+### D17 검사 단계 네트워크 차단 방식
+
+D05와 02-config-spec은 check와 check-probe의 프로젝트 명령 네트워크를 blocked로 정했지만, 무엇으로 막는지는 정하지 않았다. #30에서 Windows 일반 사용자 권한으로 후보를 확인했다([check-network-block](probes/check-network-block.md)).
+
+| 선택지 | 내용 | 확인된 점 | 남는 문제 |
+|---|---|---|---|
+| A 협조형 | 프록시 환경 변수를 닫힌 로컬 포트로 지정하고 `NODE_USE_ENV_PROXY=1`과 npm, pip, uv offline 설정을 함께 적용 | 관리자 불필요. Python urllib, Node `fetch`와 `https`, curl, pip, npm, uv, Git이 모두 막힘 | 직접 소켓과 설정을 무시하는 프로그램은 못 막음. 차단을 보장이 아닌 방어 수단으로 표시해야 함 |
+| B AppContainer | 검사 명령을 capability 없는 AppContainer에서 실행하고 workspace, toolchain, 의존성 환경, cache 폴더에 SID 권한을 부여 | 관리자 불필요. 손자 프로세스까지 OS가 차단 | 사용자 설치 Python이 권한 없이 시작되지 않음. 실제 검사가 통과하는 권한 범위와 ACL 부여의 되돌리기, Node와 uv 동작은 미확인 |
+| C A와 B 단계적 적용 | MVP는 A로 시작하고 B는 doctor에서 실행 가능할 때 켜는 선택 사항으로 둠 | A의 결과와 같음 | B의 미확인 사항은 그대로 남음 |
+
+Windows Firewall 규칙은 관리자 권한이 필요해 D02의 일반 사용자 실행 전제와 맞지 않으므로 선택지에서 뺐다. 어느 선택지든 프록시와 offline 설정은 결과 기록에 적용 방식으로 남기고 차단 성공을 보장으로 표시하지 않는다.
 
 ## 진행 방식
 
-기획과 결정 기록을 ai-collaboration 레포의 docs/로 옮겼고 이슈는 06-issue-plan.md의 계획 순서와 범위를 따른다. M0 확인 실험(#3부터 #7까지)을 마쳤고 결과는 [docs/probes/](probes/README.md)에 있다. 결정과 충돌한 결과는 D14부터 D16까지로 정했다. M1 구현은 이 결정을 따른다.
+기획과 결정 기록을 ai-collaboration 레포의 docs/로 옮겼고 이슈는 06-issue-plan.md의 계획 순서와 범위를 따른다. M0 확인 실험(#3부터 #7까지)을 마쳤고 결과는 [docs/probes/](probes/README.md)에 있다. 결정과 충돌한 결과는 D14부터 D16까지로 정했다. M1 구현은 이 결정을 따른다. 검사 단계 네트워크 차단 확인(#30)에서 생긴 D17은 #15 구현 전에 정한다.

@@ -701,7 +701,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 | U02 | 한도 오류와 잔량 및 reset 시각, CLI turn과 비용 상한 | 실제 오류 fixture. 추정값을 채우지 않음 | 인증 오류 형태는 확인. 한도 오류와 잔량, turn과 비용 상한은 확인 불가 |
 | U03 | native와 WSL2의 취소 및 자식 종료, 경로와 인코딩, 디스크 비용 | runtime별 실제 실행 시험 | native는 확인. 손자 프로세스 종료 방식별 결과, 출력 인코딩이 자식마다 다름(Python cp949, node와 git UTF-8). WSL2와 디스크 비용은 미확인 |
 | U04 | prepare 성공과 실패, install script 및 lock 변화, 부분 환경 재개 | 일회용 workspace에서 source와 lock 및 환경 전후 기록 | Linux에서 확인. lock 생성과 수정, 실패 뒤 부분 환경, 루트 lifecycle script의 source 변경. Windows 실행은 미확인 |
-| U05 | check 및 check-probe의 실제 네트워크 차단과 파일 감사 | 실제 프로젝트 명령의 별도 probe. 악의적 외부 부작용 전체 방어는 보장 밖 | 이번 M0에서 시험하지 않음 |
+| U05 | check 및 check-probe의 실제 네트워크 차단과 파일 감사 | 실제 프로젝트 명령의 별도 probe. 악의적 외부 부작용 전체 방어는 보장 밖 | 차단 방식 후보는 #30에서 확인([check-network-block](probes/check-network-block.md)). 프록시 환경 변수와 offline 설정은 도구별로 듣고 직접 소켓은 못 막음. AppContainer는 관리자 없이 손자까지 막지만 사용자 설치 Python이 시작되지 않음. Firewall은 관리자 필요. 방식은 D17로 남김. 실제 프로젝트 검사와 파일 감사는 미확인 |
 | U06 | nvm 등 관리 도구와 Corepack의 npm JS resolver, wrapper quoting과 취소 | 해당 환경에서 직접 경로와 버전 고정 및 fixture 시험 | 기본 Node 설치의 npm JS 진입점은 확인. version manager와 Corepack shim은 확인 불가. wrapper는 D15의 허용 조건으로 정함 |
 | U07 | 실제 signing 프로그램과 agent의 무인 상태, hooks와 filters의 실제 변경 | 개인 설정과 실행 시험은 이번에 하지 않음. commit 전 준비 확인 및 tree 비교 필요 | hooks의 실행과 tree, status, 메시지 변경은 확인. 서명은 설정 탐지와 가짜 프로그램 실패만 확인. 실제 signing agent와 filters는 미확인 |
 | U08 | 준비 로그 분리와 환경 재현, custom 명령 시험 결과의 재사용 | prepare/check/check-probe record와 role 입력 fixture | 이번 M0에서 시험하지 않음 |
