@@ -12,7 +12,7 @@
 | Python | 3.13.15 |
 | 실행 명령 | `python scripts/probes/claude_headless.py --out <출력 폴더>` (저장소 루트에서 실행) |
 
-모든 호출은 `claude -p --output-format json --no-session-persistence`에 prompt를 stdin으로 넘겼다. 작업 폴더는 임시 디렉터리다. 상속 `GIT_*` 환경 변수는 빼고 실행했다. 인증 파일과 토큰은 읽지 않았다. 호출 1회 비용은 `total_cost_usd` 기준 haiku로 약 0.0025 USD였다.
+모든 호출은 `claude -p --output-format json --no-session-persistence`에 prompt를 stdin으로 넘겼다. 작업 폴더는 임시 디렉터리다. 모델 ID와 최소 CLI 버전은 `docs/02-config-spec.md`의 provider registry JSON에서 읽는다(리뷰 반영으로 스크립트 상수를 없앴다. 실행 당시 상수는 registry와 같은 값이었다). 상속 `GIT_*` 환경 변수는 빼고 실행했다. 인증 파일과 토큰은 읽지 않았다. 호출 1회 비용은 `total_cost_usd` 기준 haiku로 약 0.0025 USD였다.
 
 관찰 원본은 [fixtures/claude-headless/](fixtures/claude-headless/)에 있다. `windows-claude-2.1.316.json`이 전체 요약이고, 나머지 파일은 사례별 stdout JSON과 stderr다. 임시 경로는 `<TMP>`, 홈 경로는 `<HOME>`, session_id와 uuid는 `<UUID>`, tool_use_id는 `toolu_<ID>`로 바꿨다.
 
