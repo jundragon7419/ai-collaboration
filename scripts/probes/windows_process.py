@@ -377,6 +377,24 @@ def _wrapper_case(arg: str, argv: list[str] | None = None, cmdline: str | None =
     }
 
 
+def space_free_dir(tmp: Path) -> Path | None:
+    """공백 없는 wrapper 경로 대조군용 폴더. %TEMP%에 공백이 있으면 다른 후보를 쓴다."""
+    candidates = [tmp, Path(tempfile.gettempdir()), Path(os.environ.get("PUBLIC", "")),
+                  Path(os.environ.get("SystemDrive", "C:") + "\\")]
+    for base in candidates:
+        if not str(base) or " " in str(base) or not base.exists():
+            continue
+        try:
+            d = Path(tempfile.mkdtemp(prefix="aicollab-plain-", dir=base)) if base != tmp else tmp / "plain"
+            if base == tmp:
+                d.mkdir()
+        except OSError:
+            continue
+        if " " not in str(d):
+            return d
+    return None
+
+
 def probe_cmd_wrapper(tmp: Path) -> dict[str, Any]:
     if not IS_WINDOWS:
         return {"skipped": "Windows 아님"}
@@ -390,26 +408,35 @@ def probe_cmd_wrapper(tmp: Path) -> dict[str, Any]:
     spaced_dir.mkdir()
     spaced = spaced_dir / "wrapper.cmd"
     spaced.write_bytes(body)
-    plain_dir = tmp / "plain"
-    plain_dir.mkdir()
-    plain = plain_dir / "wrapper.cmd"
-    plain.write_bytes(body)
+    plain_dir = space_free_dir(tmp)
+    plain = plain_dir / "wrapper.cmd" if plain_dir else None
+    if plain:
+        plain.write_bytes(body)
 
     variants: dict[str, Any] = {
         # A. argv 배열을 subprocess 기본 변환에 맡김. 경로에 공백이 있으면 /s가 맨 앞과 맨 끝 따옴표를 지운다.
         "argv_spaced_path": lambda a: _wrapper_case(a, argv=["cmd.exe", "/d", "/s", "/c", str(spaced), a]),
         # B. 같은 argv, 공백 없는 wrapper 경로
-        "argv_plain_path": lambda a: _wrapper_case(a, argv=["cmd.exe", "/d", "/s", "/c", str(plain), a]),
+        "argv_plain_path": (
+            (lambda a: _wrapper_case(a, argv=["cmd.exe", "/d", "/s", "/c", str(plain), a])) if plain else None
+        ),
         # C. /s가 지울 바깥 따옴표를 한 겹 더 씌운 명령 줄을 직접 만든다.
         "outer_quoted_spaced_path": lambda a: _wrapper_case(
             a, cmdline=f'cmd.exe /d /s /c ""{spaced}" {subprocess.list2cmdline([a])}"'
         ),
     }
     out: dict[str, Any] = {}
+    skipped: dict[str, str] = {}
+    out["plain_wrapper_path"] = anonymize(str(plain)) if plain else None
     for name, fn in variants.items():
+        if fn is None:
+            skipped[name] = "공백 없는 쓰기 가능 폴더를 찾지 못해 대조군을 만들 수 없음"
+            continue
         out[name] = [fn(arg) for arg in ARG_CASES]
     # D. .cmd를 cmd 없이 Popen에 argv로 넘김. Python이 내부적으로 cmd.exe를 거친다.
     out["direct_cmd_popen"] = [_wrapper_case(arg, argv=[str(spaced), arg]) for arg in ARG_CASES]
+    out["skipped"] = skipped
+    case_lists = {k: v for k, v in out.items() if isinstance(v, list)}
     out["summary"] = {
         name: {
             "same": sum(1 for c in cases if c["same"]),
@@ -417,8 +444,10 @@ def probe_cmd_wrapper(tmp: Path) -> dict[str, Any]:
             "injected": [c["sent"] for c in cases if c["injected"]],
             "different": [c["sent"] for c in cases if not c["same"]],
         }
-        for name, cases in out.items()
+        for name, cases in case_lists.items()
     }
+    if plain_dir and plain_dir.parent != tmp:
+        shutil.rmtree(plain_dir, ignore_errors=True)
     return out
 
 
