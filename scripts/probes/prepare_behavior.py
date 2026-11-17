@@ -32,6 +32,15 @@ LOCK_FILES = ("uv.lock", "package-lock.json")
 TAIL = 4000
 
 
+def _as_text(value: object) -> str:
+    """TimeoutExpired의 stdout과 stderr는 text=True여도 bytes일 수 있다. 문자열로 맞춘다."""
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 class Recorder:
     def __init__(self, tmp: Path) -> None:
         self.tmp = tmp
@@ -63,7 +72,7 @@ class Recorder:
             )
             res: dict[str, Any] = {"exit_code": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "timed_out": False}
         except subprocess.TimeoutExpired as exc:
-            res = {"exit_code": None, "stdout": str(exc.stdout or ""), "stderr": str(exc.stderr or ""), "timed_out": True}
+            res = {"exit_code": None, "stdout": _as_text(exc.stdout), "stderr": _as_text(exc.stderr), "timed_out": True}
         except FileNotFoundError as exc:
             res = {"exit_code": None, "stdout": "", "stderr": str(exc), "timed_out": False, "not_found": True}
         res["argv"] = [self.anonymize(Path(argv[0]).name if i == 0 else a) for i, a in enumerate(argv)]

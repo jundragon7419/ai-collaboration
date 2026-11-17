@@ -28,6 +28,15 @@ from typing import Any
 IS_WINDOWS = os.name == "nt"
 
 
+def _as_text(value: object) -> str:
+    """TimeoutExpired의 stdout과 stderr는 text=True여도 bytes일 수 있다. 문자열로 맞춘다."""
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 class Recorder:
     def __init__(self, tmp: Path) -> None:
         self.tmp = tmp
@@ -81,8 +90,8 @@ class Recorder:
         except subprocess.TimeoutExpired as exc:
             result = {
                 "exit_code": None,
-                "stdout": exc.stdout if isinstance(exc.stdout, str) else "",
-                "stderr": exc.stderr if isinstance(exc.stderr, str) else "",
+                "stdout": _as_text(exc.stdout),
+                "stderr": _as_text(exc.stderr),
                 "timed_out": True,
             }
         except FileNotFoundError as exc:
