@@ -98,8 +98,27 @@ class Recorder:
         self.checks[check_id] = {"title": title, "observed": observed, "steps": steps}
 
 
+class SetupError(RuntimeError):
+    """실험 준비 명령이 실패했다. 이 뒤의 관찰은 기록하지 않는다."""
+
+
+def require(step: dict[str, Any], label: str) -> dict[str, Any]:
+    if step.get("exit_code") != 0:
+        stderr = (step.get("stderr") or "").strip()[:300]
+        raise SetupError(f"{label} 실패: exit={step.get('exit_code')} stderr={stderr}")
+    return step
+
+
+def inherited_git_env() -> list[str]:
+    """호출한 쪽에서 넘어온 GIT_* 환경 변수 이름. 값은 기록하지 않는다."""
+    return sorted(k for k in os.environ if k.upper().startswith("GIT_"))
+
+
 def isolated_env(tmp: Path) -> dict[str, str]:
-    env = dict(os.environ)
+    # GIT_CONFIG_COUNT, GIT_CONFIG_KEY_*, GIT_CONFIG_VALUE_*, GIT_CONFIG_PARAMETERS는 명령 범위 설정이라
+    # 전역 설정 파일을 바꿔도 적용된다(core.hooksPath 등). GIT_TEMPLATE_DIR은 init에 hooks를 넣을 수 있다.
+    # 실험 저장소를 격리하기 위해 GIT_*를 모두 빼고 필요한 값만 다시 넣는다.
+    env = {k: v for k, v in os.environ.items() if not k.upper().startswith("GIT_")}
     global_cfg = tmp / "isolated-global.gitconfig"
     if not global_cfg.exists():
         global_cfg.write_text(
@@ -110,8 +129,6 @@ def isolated_env(tmp: Path) -> dict[str, str]:
     env["GIT_CONFIG_GLOBAL"] = str(global_cfg)
     env["GIT_CONFIG_NOSYSTEM"] = "1"
     env["GIT_TERMINAL_PROMPT"] = "0"
-    for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
-        env.pop(key, None)
     return env
 
 
@@ -129,12 +146,15 @@ def write_hook(repo_git_dir: Path, name: str, body: str) -> None:
 
 def init_repo(rec: Recorder, path: Path, env: dict[str, str]) -> list[dict[str, Any]]:
     path.mkdir(parents=True)
-    steps = [rec.run(["git", "init", "-q", "-b", "main", str(path)], path, env)]
+    steps = [require(rec.run(["git", "init", "-q", "-b", "main", str(path)], path, env), "git init")]
     write(path / ".gitattributes", "* text=auto eol=lf\n")
     write(path / ".gitignore", "node_modules/\n.venv/\n")
     write(path / "src.txt", "line1\nline2\n")
-    steps.append(rec.run(["git", "add", "-A"], path, env))
-    steps.append(rec.run(["git", "commit", "-q", "-m", "base"], path, env))
+    steps.append(require(rec.run(["git", "add", "-A"], path, env), "git add -A"))
+    steps.append(require(rec.run(["git", "commit", "-q", "-m", "base"], path, env), "git commit -q -m"))
+    hooks = rec.run(["git", "rev-parse", "--git-path", "hooks"], path, env)
+    if (path / hooks["stdout"].strip()).resolve() != (path / ".git" / "hooks").resolve():
+        raise SetupError(f"hooks 경로가 실험 저장소 밖을 가리킴: {hooks['stdout'].strip()}")
     return steps
 
 
@@ -164,7 +184,7 @@ def probe_worktree(rec: Recorder, tmp: Path) -> None:
     steps.append(branch_after)
     # 폴더를 직접 지운 뒤 prune 하는 경우
     wt3 = tmp / "g1" / "wt3"
-    steps.append(rec.run(["git", "worktree", "add", "-b", "aicollab/run-3", str(wt3), "HEAD"], repo, env))
+    steps.append(require(rec.run(["git", "worktree", "add", "-b", "aicollab/run-3", str(wt3), "HEAD"], repo, env), "git worktree add -b"))
     shutil.rmtree(wt3)
     list_stale = rec.run(["git", "worktree", "list", "--porcelain"], repo, env)
     steps.append(list_stale)
@@ -200,16 +220,16 @@ def probe_hooks(rec: Recorder, tmp: Path) -> None:
     for name in ("post-checkout", "pre-commit", "commit-msg", "post-commit"):
         write_hook(repo / ".git", name, HOOK_LOG_BODY.format(name=name, log=log))
     wt = tmp / "g2" / "wt"
-    steps.append(rec.run(["git", "worktree", "add", "-b", "aicollab/run-2", str(wt), "HEAD"], repo, env))
+    steps.append(require(rec.run(["git", "worktree", "add", "-b", "aicollab/run-2", str(wt), "HEAD"], repo, env), "git worktree add -b"))
     write(wt / "src.txt", "line1\nline2\nline3\n")
-    steps.append(rec.run(["git", "add", "-A"], wt, env))
+    steps.append(require(rec.run(["git", "add", "-A"], wt, env), "git add -A"))
     commit = rec.run(["git", "commit", "-q", "-m", "change"], wt, env)
     steps.append(commit)
     hook_log = Path(log).read_text(encoding="utf-8") if Path(log).exists() else ""
     no_verify_log_before = hook_log
     write(wt / "src.txt", "line1\n")
-    steps.append(rec.run(["git", "add", "-A"], wt, env))
-    steps.append(rec.run(["git", "commit", "-q", "--no-verify", "-m", "no-verify"], wt, env))
+    steps.append(require(rec.run(["git", "add", "-A"], wt, env), "git add -A"))
+    steps.append(require(rec.run(["git", "commit", "-q", "--no-verify", "-m", "no-verify"], wt, env), "git commit -q --no-verify"))
     hook_log_after = Path(log).read_text(encoding="utf-8") if Path(log).exists() else ""
     hooks_path = rec.run(["git", "rev-parse", "--git-path", "hooks"], wt, env)
     steps.append(hooks_path)
@@ -240,7 +260,7 @@ def probe_hook_mutation(rec: Recorder, tmp: Path) -> None:
     steps += init_repo(rec, repo, env)
     write_hook(repo / ".git", "pre-commit", 'echo "added-by-pre-commit" >> src.txt\ngit add src.txt\n')
     write(repo / "src.txt", "line1\nline2\nchange\n")
-    steps.append(rec.run(["git", "add", "-A"], repo, env))
+    steps.append(require(rec.run(["git", "add", "-A"], repo, env), "git add -A"))
     expected = rec.run(["git", "write-tree"], repo, env)
     steps.append(expected)
     commit = rec.run(["git", "commit", "-q", "-m", "c"], repo, env)
@@ -261,7 +281,7 @@ def probe_hook_mutation(rec: Recorder, tmp: Path) -> None:
     steps += init_repo(rec, repo, env)
     write_hook(repo / ".git", "pre-commit", 'echo "unstaged-by-pre-commit" >> src.txt\n')
     write(repo / "src.txt", "line1\nline2\nchange\n")
-    steps.append(rec.run(["git", "add", "-A"], repo, env))
+    steps.append(require(rec.run(["git", "add", "-A"], repo, env), "git add -A"))
     expected = rec.run(["git", "write-tree"], repo, env)
     steps.append(expected)
     commit = rec.run(["git", "commit", "-q", "-m", "c"], repo, env)
@@ -280,7 +300,7 @@ def probe_hook_mutation(rec: Recorder, tmp: Path) -> None:
     steps += init_repo(rec, repo, env)
     write_hook(repo / ".git", "post-commit", 'echo "post-commit" >> src.txt\n')
     write(repo / "src.txt", "line1\nline2\nchange\n")
-    steps.append(rec.run(["git", "add", "-A"], repo, env))
+    steps.append(require(rec.run(["git", "add", "-A"], repo, env), "git add -A"))
     expected = rec.run(["git", "write-tree"], repo, env)
     steps.append(expected)
     commit = rec.run(["git", "commit", "-q", "-m", "c"], repo, env)
@@ -299,7 +319,7 @@ def probe_hook_mutation(rec: Recorder, tmp: Path) -> None:
     steps += init_repo(rec, repo, env)
     write_hook(repo / ".git", "pre-commit", 'echo "blocked by hook" >&2\nexit 3\n')
     write(repo / "src.txt", "line1\nline2\nchange\n")
-    steps.append(rec.run(["git", "add", "-A"], repo, env))
+    steps.append(require(rec.run(["git", "add", "-A"], repo, env), "git add -A"))
     head_before = out(rec.run(["git", "rev-parse", "HEAD"], repo, env))
     commit = rec.run(["git", "commit", "-q", "-m", "c"], repo, env)
     steps.append(commit)
@@ -315,8 +335,8 @@ def probe_hook_mutation(rec: Recorder, tmp: Path) -> None:
     steps += init_repo(rec, repo, env)
     write_hook(repo / ".git", "commit-msg", 'echo "Signed-off-by: hook" >> "$1"\n')
     write(repo / "src.txt", "line1\nchange\n")
-    steps.append(rec.run(["git", "add", "-A"], repo, env))
-    steps.append(rec.run(["git", "commit", "-q", "-m", "original"], repo, env))
+    steps.append(require(rec.run(["git", "add", "-A"], repo, env), "git add -A"))
+    steps.append(require(rec.run(["git", "commit", "-q", "-m", "original"], repo, env), "git commit -q -m"))
     msg = rec.run(["git", "log", "-1", "--format=%B"], repo, env)
     steps.append(msg)
     results["commit_msg_mutation"] = {"final_message": out(msg)}
@@ -357,7 +377,7 @@ def probe_signing(rec: Recorder, tmp: Path) -> None:
     steps += init_repo(rec, repo, env)
 
     # 탐지 명령
-    rec.run(["git", "config", "commit.gpgsign", "true"], repo, env)
+    require(rec.run(["git", "config", "commit.gpgsign", "true"], repo, env), "git config commit.gpgsign true")
     detect = rec.run(["git", "config", "--show-origin", "--show-scope", "--get-regexp", r"^(commit|tag)\.gpgsign$|^gpg\.|^user\.signingkey$"], repo, env)
     steps.append(detect)
     bool_val = rec.run(["git", "config", "--type=bool", "--get", "commit.gpgsign"], repo, env)
@@ -372,9 +392,9 @@ def probe_signing(rec: Recorder, tmp: Path) -> None:
     else:
         write(fail_prog, "#!/bin/sh\necho 'signing refused' >&2\nexit 1\n")
         fail_prog.chmod(0o755)
-    rec.run(["git", "config", "gpg.program", str(fail_prog)], repo, env)
+    require(rec.run(["git", "config", "gpg.program", str(fail_prog)], repo, env), "git config gpg.program str(fail_prog)")
     write(repo / "src.txt", "line1\nsign-fail\n")
-    steps.append(rec.run(["git", "add", "-A"], repo, env))
+    steps.append(require(rec.run(["git", "add", "-A"], repo, env), "git add -A"))
     head_before = out(rec.run(["git", "rev-parse", "HEAD"], repo, env))
     commit = rec.run(["git", "commit", "-q", "-m", "signed"], repo, env)
     steps.append(commit)
@@ -392,7 +412,7 @@ def probe_signing(rec: Recorder, tmp: Path) -> None:
     else:
         write(wait_prog, "#!/bin/sh\nprintf 'PIN: ' >&2\nread PIN\nsleep 30\nexit 1\n")
         wait_prog.chmod(0o755)
-    rec.run(["git", "config", "gpg.program", str(wait_prog)], repo, env)
+    require(rec.run(["git", "config", "gpg.program", str(wait_prog)], repo, env), "git config gpg.program str(wait_prog)")
     start = time.monotonic()
     try:
         proc = subprocess.Popen(
@@ -421,10 +441,10 @@ def probe_signing(rec: Recorder, tmp: Path) -> None:
     results["waiting_program_stdin_pipe"] = wait_result
 
     # ssh 형식인데 서명 키가 없는 경우
-    rec.run(["git", "config", "--unset", "gpg.program"], repo, env)
+    require(rec.run(["git", "config", "--unset", "gpg.program"], repo, env), "git config --unset gpg.program")
     if lock_left:
         (repo / ".git" / "index.lock").unlink()
-    rec.run(["git", "config", "gpg.format", "ssh"], repo, env)
+    require(rec.run(["git", "config", "gpg.format", "ssh"], repo, env), "git config gpg.format ssh")
     commit = rec.run(["git", "commit", "-q", "-m", "ssh-no-key"], repo, env)
     steps.append(commit)
     results["ssh_format_without_key"] = {"commit_exit": commit["exit_code"], "stderr": commit["stderr"].strip()}
@@ -440,7 +460,7 @@ def probe_no_change(rec: Recorder, tmp: Path) -> None:
     results: dict[str, Any] = {"base_tree": base_tree}
 
     def snapshot(label: str) -> None:
-        steps.append(rec.run(["git", "add", "-A"], repo, env))
+        steps.append(require(rec.run(["git", "add", "-A"], repo, env), "git add -A"))
         wt = rec.run(["git", "write-tree"], repo, env)
         quiet = rec.run(["git", "diff", "--cached", "--quiet", "HEAD"], repo, env)
         status = rec.run(["git", "status", "--porcelain"], repo, env)
@@ -489,19 +509,19 @@ def probe_push_and_gh(rec: Recorder, tmp: Path) -> None:
     results: dict[str, Any] = {}
     remote = tmp / "g6" / "remote.git"
     remote.parent.mkdir(parents=True)
-    steps.append(rec.run(["git", "init", "-q", "--bare", "-b", "main", str(remote)], remote.parent, env))
+    steps.append(require(rec.run(["git", "init", "-q", "--bare", "-b", "main", str(remote)], remote.parent, env), "git init -q --bare"))
     repo = tmp / "g6" / "repo"
     steps += init_repo(rec, repo, env)
-    steps.append(rec.run(["git", "remote", "add", "origin", str(remote)], repo, env))
-    steps.append(rec.run(["git", "switch", "-q", "-c", "aicollab/run-6"], repo, env))
+    steps.append(require(rec.run(["git", "remote", "add", "origin", str(remote)], repo, env), "git remote add origin"))
+    steps.append(require(rec.run(["git", "switch", "-q", "-c", "aicollab/run-6"], repo, env), "git switch -q -c"))
     write(repo / "src.txt", "line1\npush1\n")
-    steps.append(rec.run(["git", "commit", "-qam", "p1"], repo, env))
+    steps.append(require(rec.run(["git", "commit", "-qam", "p1"], repo, env), "git commit -qam p1"))
 
     lease = "--force-with-lease=refs/heads/aicollab/run-6:"
     first = rec.run(["git", "push", "--porcelain", lease, "origin", "HEAD:refs/heads/aicollab/run-6"], repo, env)
     steps.append(first)
     write(repo / "src.txt", "line1\npush2\n")
-    steps.append(rec.run(["git", "commit", "-qam", "p2"], repo, env))
+    steps.append(require(rec.run(["git", "commit", "-qam", "p2"], repo, env), "git commit -qam p2"))
     second = rec.run(["git", "push", "--porcelain", lease, "origin", "HEAD:refs/heads/aicollab/run-6"], repo, env)
     steps.append(second)
     remote_head = rec.run(["git", "rev-parse", "refs/heads/aicollab/run-6"], remote, env)
@@ -550,6 +570,7 @@ def main() -> int:
         "python": sys.version.split()[0],
         "git_version": out(rec.run(["git", "--version"], tmp, dict(os.environ))),
         "locale_env": {k: os.environ.get(k) for k in ("LANG", "LC_ALL", "LANGUAGE") if os.environ.get(k)},
+        "inherited_git_env_removed": inherited_git_env(),
     }
     failures = {}
     for fn in (probe_worktree, probe_hooks, probe_hook_mutation, probe_signing, probe_no_change, probe_push_and_gh):
@@ -564,6 +585,7 @@ def main() -> int:
     print(f"결과: {out_dir / 'results.json'}")
     if failures:
         print(f"스크립트 오류: {failures}", file=sys.stderr)
+        return 1
     return 0
 
 

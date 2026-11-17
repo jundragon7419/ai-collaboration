@@ -14,7 +14,11 @@
 | gh | 없음 |
 | 실행 명령 | `python3 scripts/probes/git_behavior.py --out <출력 폴더>` |
 
-실험 저장소는 임시 디렉터리에 새로 만들었다. 실험용 Git 명령은 `GIT_CONFIG_GLOBAL`을 임시 파일로 바꾸고 `GIT_CONFIG_NOSYSTEM=1`, `GIT_TERMINAL_PROMPT=0`으로 실행했다. 사용자 저장소와 전역 설정은 바꾸지 않았다. 사용자 서명 설정은 키 이름과 범위만 읽었다.
+실험 저장소는 임시 디렉터리에 새로 만들었다. 실험용 Git 명령은 `GIT_`로 시작하는 상속 환경 변수를 모두 빼고, `GIT_CONFIG_GLOBAL`(임시 파일), `GIT_CONFIG_NOSYSTEM=1`, `GIT_TERMINAL_PROMPT=0`만 넣어 실행했다. `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_*`, `GIT_CONFIG_VALUE_*`, `GIT_CONFIG_PARAMETERS`는 명령 범위 설정이라 전역 설정 파일을 바꿔도 적용된다. 이 변수로 `core.hooksPath`를 넘기면 정리 전 스크립트에서는 외부 hook이 실험 저장소 commit마다 실행됐다. 정리한 변수는 이름만 `results.json`의 `inherited_git_env_removed`에 남긴다. 실험 저장소의 hooks 경로가 `.git/hooks`가 아니거나 준비 명령(init, add, commit, config, worktree add 등)이 실패하면 스크립트는 exit 1로 끝난다.
+
+사용자 저장소와 전역 설정은 바꾸지 않았다. 사용자 서명 설정은 키 이름과 범위만 읽었다.
+
+이번 실행 환경에는 `GIT_CONFIG_PARAMETERS`가 있었다. 정리 전 스크립트로 한 첫 실행과 정리 뒤 실행의 관찰은 commit SHA와 소요 시간을 빼면 G1부터 G6까지 같았다.
 
 Windows에서는 실행하지 않았다. 기존 기록의 Windows Git은 `2.53.0.windows.2`([04-review C11](../04-review.md#명령-실행-기록))로 이번 실행 환경과 버전이 다르다. Windows의 hooks 실행(sh.exe), 경로 표기, 서명 프로그램 호출은 미확인이다. 같은 스크립트를 Windows에서 실행하면 같은 형식의 `results.json`이 나온다.
 
