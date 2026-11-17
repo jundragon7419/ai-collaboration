@@ -17,11 +17,20 @@ REGISTRY_VERSION = 1
 VERIFIED_ON = "2026-11-17"
 UNKNOWN_VERSION = "unknown"
 
+# docs/probes/claude-headless.md C5: Claude Code의 --effort 값 이름
+CLAUDE_EFFORTS = ("low", "medium", "high", "xhigh", "max")
+# docs/probes/codex-exec.md X5: API 전체 값
+CODEX_EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+# docs/probes/codex-exec.md X5: gpt-6-astra는 minimal을 거부한다
+CODEX_ASTRA_EFFORTS = ("low", "medium", "high", "xhigh", "max")
+
 
 @dataclass(frozen=True, slots=True)
 class Model:
     id: str
     min_cli_version: str
+    # 모델별 effort 허용 값. None이면 회사 목록을 쓴다. 있으면 회사 목록보다 우선한다.
+    effort_values: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +42,8 @@ class Provider:
     # 실행 파일 이름에서 확장자를 뺀 값. 선택할 수 없는 회사는 None이다.
     cli_name: str | None
     sources: tuple[str, ...]
+    # 회사별 effort 이름 목록. 이름 검사용이며 모델별 실제 지원은 doctor probe가 판정한다.
+    effort_values: tuple[str, ...] = ()
 
 
 PROVIDERS: tuple[Provider, ...] = (
@@ -51,19 +62,21 @@ PROVIDERS: tuple[Provider, ...] = (
             "https://platform.claude.com/docs/en/models/overview",
             "https://code.claude.com/docs/en/model-config",
         ),
+        effort_values=CLAUDE_EFFORTS,
     ),
     Provider(
         id="codex",
         menu_order=2,
         enabled=True,
         models=(
-            Model("gpt-6-astra", UNKNOWN_VERSION),
+            Model("gpt-6-astra", UNKNOWN_VERSION, effort_values=CODEX_ASTRA_EFFORTS),
             Model("gpt-6.1-sol", UNKNOWN_VERSION),
             Model("gpt-6.1-terra", UNKNOWN_VERSION),
             Model("gpt-6-luna", UNKNOWN_VERSION),
         ),
         cli_name="codex",
         sources=("https://learn.chatgpt.com/docs/models",),
+        effort_values=CODEX_EFFORTS,
     ),
     Provider(id="gemini", menu_order=3, enabled=False, models=(), cli_name=None, sources=()),
 )
@@ -78,6 +91,17 @@ def get_model(provider_id: str, model_id: str) -> Model | None:
     if provider is None:
         return None
     return next((m for m in provider.models if m.id == model_id), None)
+
+
+def allowed_efforts(provider_id: str, model_id: str) -> tuple[str, ...]:
+    """effort로 쓸 수 있는 이름. 모델별 목록이 있으면 그것이, 없으면 회사 목록이 우선한다."""
+    provider = get_provider(provider_id)
+    if provider is None:
+        return ()
+    model = get_model(provider_id, model_id)
+    if model is not None and model.effort_values is not None:
+        return model.effort_values
+    return provider.effort_values
 
 
 def enabled_providers() -> tuple[Provider, ...]:

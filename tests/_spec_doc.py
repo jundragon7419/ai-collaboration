@@ -60,3 +60,13 @@ def with_assignment(assignment: dict[str, Any]) -> dict[str, Any]:
 def extra_example(index: int) -> dict[str, Any]:
     """'추가 명령 예시' 절의 TOML 블록. 0은 prepare, 1은 checks다."""
     return tomllib.loads(code_blocks(section("추가 명령 예시"), "toml")[index])
+
+
+def effort_lists() -> dict[str, tuple[str, ...]]:
+    """'effort 허용 값' 소절의 "- 이름: 값, 값." 목록. 키는 소문자 이름이다."""
+    text = SPEC.read_text(encoding="utf-8")
+    start = text.index("\n### effort 허용 값\n")
+    end = text.find("\n## ", start + 3)
+    body = text[start : end if end != -1 else len(text)]
+    found = re.findall(r"^- ([\w.-]+): ([a-z, ]+)\.", body, re.MULTILINE)
+    return {name.lower(): tuple(v.strip() for v in values.split(",")) for name, values in found}

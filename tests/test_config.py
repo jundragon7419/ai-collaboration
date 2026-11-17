@@ -312,11 +312,68 @@ def test_agent_requires_provider_and_model() -> None:
     assert (ErrorCode.MISSING_KEY, "agents.plan.model") in codes
 
 
-def test_effort_value_is_not_validated_yet() -> None:
-    # 모델별 허용 effort는 결정 전이다. 문자열이면 받는다.
-    data = put(base(), "agents.plan.effort", "xhigh")
-    assert parse_config(data).agents["plan"].effort == "xhigh"
+CLAUDE_EFFORTS = ["low", "medium", "high", "xhigh", "max"]
+CODEX_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+
+
+@pytest.mark.parametrize("effort", CLAUDE_EFFORTS)
+def test_claude_effort_names_are_accepted(effort: str) -> None:
+    data = put(base(), "agents.plan.effort", effort)
+    assert parse_config(data).agents["plan"].effort == effort
+
+
+@pytest.mark.parametrize("effort", ["xhigh1", "Max", "hgih", "minimal", "none", "ultra"])
+def test_claude_effort_typo_or_codex_only_name_is_rejected(effort: str) -> None:
+    data = put(base(), "agents.plan.effort", effort)
+    issue = expect(data, ErrorCode.INVALID_EFFORT, "agents.plan.effort")
+    assert "low, medium, high, xhigh, max" in issue.message
+
+
+@pytest.mark.parametrize("effort", CODEX_EFFORTS)
+def test_codex_models_without_a_model_list_use_the_provider_list(effort: str) -> None:
+    # gpt-6.1-terra는 모델별 목록이 없으므로 minimal과 none도 정적으로 허용한다.
+    data = put(base(), "agents.code.effort", effort)
+    assert parse_config(data).agents["code"].effort == effort
+
+
+def test_codex_provider_list_rejects_unknown_names() -> None:
+    expect(
+        put(base(), "agents.code.effort", "bogus-effort"),
+        ErrorCode.INVALID_EFFORT,
+        "agents.code.effort",
+    )
+
+
+@pytest.mark.parametrize("effort", ["low", "medium", "high", "xhigh", "max"])
+def test_gpt_6_astra_accepts_its_verified_efforts(effort: str) -> None:
+    assert parse_config(put(base(), "agents.review.effort", effort))
+
+
+@pytest.mark.parametrize("effort", ["minimal", "none"])
+def test_gpt_6_astra_model_list_overrides_the_provider_list(effort: str) -> None:
+    issue = expect(
+        put(base(), "agents.review.effort", effort),
+        ErrorCode.INVALID_EFFORT,
+        "agents.review.effort",
+    )
+    assert "gpt-6-astra" in issue.message
+
+
+def test_effort_type_and_empty_value() -> None:
     expect(put(base(), "agents.plan.effort", 3), ErrorCode.INVALID_TYPE, "agents.plan.effort")
+    expect(put(base(), "agents.plan.effort", ""), ErrorCode.INVALID_VALUE, "agents.plan.effort")
+
+
+def test_effort_is_optional() -> None:
+    assert parse_config(base()).agents["plan"].effort is None
+
+
+def test_effort_is_checked_with_the_provider_list_when_the_model_is_wrong() -> None:
+    # 모델 오류와 effort 오류를 따로 알린다. 모델 오류 때문에 effort가 막히지는 않는다.
+    data = put(put(base(), "agents.plan.model", "opus"), "agents.plan.effort", "xhigh")
+    paths = {i.path for i in issues_of(data)}
+    assert "agents.plan.model" in paths
+    assert "agents.plan.effort" not in paths
 
 
 def test_perspective_choices() -> None:

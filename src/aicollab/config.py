@@ -59,6 +59,7 @@ class ErrorCode(StrEnum):
     UNKNOWN_REFERENCE = "unknown-reference"
     INVALID_COUNT = "invalid-count"
     INVALID_PATH = "invalid-path"
+    INVALID_EFFORT = "invalid-effort"
     CONFLICT = "conflict"
 
 
@@ -106,7 +107,7 @@ class AgentConfig:
     id: str
     provider: str
     model: str
-    # 값 검증은 하지 않는다. 모델별 허용 effort는 결정 전이다(이슈 #10 댓글 참고).
+    # 이름은 registry 목록으로 검사한다. 모델별 실제 지원은 doctor probe가 판정한다.
     effort: str | None
     perspective: str
 
@@ -593,11 +594,13 @@ class _Validator:
             provider_id = self.required_string(raw, "provider", path)
             model_id = self.required_string(raw, "model", path)
             self._check_agent_model(path, provider_id, model_id, providers)
+            effort = self.optional_string(raw, "effort", path)
+            self._check_effort(path, provider_id, model_id, effort)
             agents[agent_id] = AgentConfig(
                 id=agent_id,
                 provider=provider_id,
                 model=model_id,
-                effort=self.optional_string(raw, "effort", path),
+                effort=effort,
                 perspective=self.string(raw, "perspective", path, "general", PERSPECTIVES),
             )
         return agents
@@ -630,6 +633,19 @@ class _Validator:
                 ErrorCode.INVALID_VALUE,
                 f"{path}.model",
                 f"{model_id!r}는 registry에 없다. 전체 모델 ID만 쓸 수 있다: {names}",
+            )
+
+    def _check_effort(self, path: str, provider_id: str, model_id: str, effort: str | None) -> None:
+        known = registry.get_provider(provider_id)
+        if effort is None or known is None or not known.enabled:
+            return
+        allowed = registry.allowed_efforts(provider_id, model_id)
+        if effort not in allowed:
+            target = model_id if registry.get_model(provider_id, model_id) else provider_id
+            self.add(
+                ErrorCode.INVALID_EFFORT,
+                f"{path}.effort",
+                f"{effort!r}는 {target}에서 허용하지 않는다. 허용: {_choices_text(allowed)}",
             )
 
     def _pipeline(self, data: Mapping[str, Any]) -> PipelineConfig:

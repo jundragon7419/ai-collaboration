@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from _spec_doc import code_blocks, registry_table, section
+from _spec_doc import code_blocks, effort_lists, registry_table, section
 
 from aicollab import provider_registry as registry
 from aicollab.provider_registry import VersionStatus, check_model_version
@@ -78,3 +78,44 @@ def test_unknown_minimum_is_reported_as_unknown(installed: str | None) -> None:
 def test_unregistered_model_raises() -> None:
     with pytest.raises(ValueError, match="registry"):
         check_model_version("claude", "opus", "2.1.316")
+
+
+def test_allowed_efforts_prefer_the_model_list() -> None:
+    assert registry.allowed_efforts("claude", "claude-opus-5-5") == (
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+    )
+    assert "minimal" in registry.allowed_efforts("codex", "gpt-6.1-terra")
+    assert "none" in registry.allowed_efforts("codex", "gpt-6.1-terra")
+    assert registry.allowed_efforts("codex", "gpt-6-astra") == (
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+    )
+
+
+def test_allowed_efforts_for_unknown_model_fall_back_to_the_provider_list() -> None:
+    assert registry.allowed_efforts("claude", "opus") == registry.allowed_efforts(
+        "claude", "claude-opus-5-5"
+    )
+    assert registry.allowed_efforts("openai", "x") == ()
+    assert registry.allowed_efforts("gemini", "x") == ()
+
+
+def test_only_gpt_6_astra_has_a_model_effort_list() -> None:
+    with_list = [m.id for p in registry.PROVIDERS for m in p.models if m.effort_values is not None]
+    assert with_list == ["gpt-6-astra"]
+
+
+def test_effort_lists_match_spec() -> None:
+    doc = effort_lists()
+    assert doc == {
+        "claude": registry.allowed_efforts("claude", "claude-opus-5-5"),
+        "codex": registry.allowed_efforts("codex", "gpt-6.1-terra"),
+        "gpt-6-astra": registry.allowed_efforts("codex", "gpt-6-astra"),
+    }
