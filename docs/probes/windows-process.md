@@ -18,6 +18,11 @@
 
 같은 스크립트를 두 번 실행했다. 첫 실행에서 wrapper 인자 처리(W3)가 경로의 공백 때문에 전부 실패해, 비교 방식을 추가한 스크립트로 다시 실행했다. W1, W2, W4는 두 실행의 결과가 같았다. 이 문서와 fixture는 두 번째 실행 결과다.
 
+리뷰 반영으로 실행 뒤 스크립트를 두 군데 고쳤다. 관찰 결과에는 영향이 없다.
+
+- W1: 시험이 중간에 실패해도 자식과 손자를 정리하도록 `finally`에서 `taskkill /T /F`와 손자 종료를 한다. Job Object API 호출이 실패하면 그 사실을 기록하고 정리한다. 이번 실행에서는 API 호출이 모두 성공했다.
+- W3: `wrapper.cmd`에 Python과 dumper 경로를 직접 쓰지 않고 환경 변수(`PROBE_PY`, `PROBE_DUMPER`)로 넘겨 파일을 ASCII로만 쓴다. 이전 스크립트는 경로를 ANSI(cp949)로 썼고 콘솔은 65001이었다. 이번 실행의 두 경로에는 ASCII 밖 문자가 없어 같은 내용이 기록됐다.
+
 관찰 원본은 [fixtures/windows-process/windows-11-python-3.13.15.json](fixtures/windows-process/windows-11-python-3.13.15.json)에 있다. 홈 경로는 `<HOME>`, 사용자 이름은 `<USER>`로 바꿨다.
 
 ## 결과 요약

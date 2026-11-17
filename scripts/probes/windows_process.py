@@ -92,35 +92,49 @@ def grandchild_pid(hb: Path) -> int | None:
         return None
 
 
+def cleanup_tree(proc: subprocess.Popen[bytes] | None, hb: Path) -> None:
+    """시험이 중간에 실패해도 자식과 손자 프로세스를 남기지 않는다."""
+    if proc is not None and proc.poll() is None:
+        if IS_WINDOWS:
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
+        else:
+            proc.kill()
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+    gpid = grandchild_pid(hb)
+    if gpid and pid_alive(gpid):
+        kill_pid(gpid)
+
+
 def probe_tree_kill(tmp: Path) -> dict[str, Any]:
     results: dict[str, Any] = {}
 
     # A. subprocess timeout 뒤 Popen.kill()만 호출
     proc, hb = start_tree(tmp, "a")
     try:
-        proc.wait(timeout=1)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        proc.wait()
-    gpid = grandchild_pid(hb)
-    alive = heartbeat_alive(hb)
-    results["popen_kill_only"] = {"child_exit": proc.returncode, "grandchild_alive_after": alive}
-    if gpid and alive:
-        kill_pid(gpid)
+        try:
+            proc.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        results["popen_kill_only"] = {"child_exit": proc.returncode, "grandchild_alive_after": heartbeat_alive(hb)}
+    finally:
+        cleanup_tree(proc, hb)
 
     # B. subprocess.run(timeout=)의 기본 동작
     hb_b = tmp / "b.hb"
     script = tmp / "child.py"
     try:
-        subprocess.run([sys.executable, str(script), str(hb_b)], timeout=1.5)
-        b_timeout = False
-    except subprocess.TimeoutExpired:
-        b_timeout = True
-    alive = heartbeat_alive(hb_b)
-    results["subprocess_run_timeout"] = {"timeout_raised": b_timeout, "grandchild_alive_after": alive}
-    gpid = grandchild_pid(hb_b)
-    if gpid and alive:
-        kill_pid(gpid)
+        try:
+            subprocess.run([sys.executable, str(script), str(hb_b)], timeout=1.5)
+            b_timeout = False
+        except subprocess.TimeoutExpired:
+            b_timeout = True
+        results["subprocess_run_timeout"] = {"timeout_raised": b_timeout, "grandchild_alive_after": heartbeat_alive(hb_b)}
+    finally:
+        cleanup_tree(None, hb_b)
 
     if not IS_WINDOWS:
         results["note"] = "Windows가 아니어서 taskkill, Job Object, CTRL_BREAK 시험을 건너뜀"
@@ -128,13 +142,14 @@ def probe_tree_kill(tmp: Path) -> dict[str, Any]:
 
     # C. taskkill /T /F
     proc, hb = start_tree(tmp, "c")
-    r = subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True, text=True, errors="replace")
-    proc.wait(timeout=10)
-    alive = heartbeat_alive(hb)
-    results["taskkill_tree"] = {"taskkill_exit": r.returncode, "stdout": r.stdout.strip()[:500], "grandchild_alive_after": alive}
-    gpid = grandchild_pid(hb)
-    if gpid and alive:
-        kill_pid(gpid)
+    try:
+        r = subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True, text=True, errors="replace")
+        proc.wait(timeout=10)
+        results["taskkill_tree"] = {
+            "taskkill_exit": r.returncode, "stdout": r.stdout.strip()[:500], "grandchild_alive_after": heartbeat_alive(hb),
+        }
+    finally:
+        cleanup_tree(proc, hb)
 
     # D. Job Object (KILL_ON_JOB_CLOSE)에 넣고 TerminateJobObject
     results["job_object"] = probe_job_object(tmp)
@@ -142,17 +157,15 @@ def probe_tree_kill(tmp: Path) -> dict[str, Any]:
     # E. CREATE_NEW_PROCESS_GROUP + CTRL_BREAK_EVENT
     proc, hb = start_tree(tmp, "e", creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
     try:
-        proc.send_signal(signal.CTRL_BREAK_EVENT)  # type: ignore[attr-defined]
-        proc.wait(timeout=5)
-        e_exit: Any = proc.returncode
-    except Exception as exc:  # noqa: BLE001
-        e_exit = repr(exc)
-        proc.kill()
-    alive = heartbeat_alive(hb)
-    results["ctrl_break_group"] = {"child_exit": e_exit, "grandchild_alive_after": alive}
-    gpid = grandchild_pid(hb)
-    if gpid and alive:
-        kill_pid(gpid)
+        try:
+            proc.send_signal(signal.CTRL_BREAK_EVENT)  # type: ignore[attr-defined]
+            proc.wait(timeout=5)
+            e_exit: Any = proc.returncode
+        except Exception as exc:  # noqa: BLE001
+            e_exit = repr(exc)
+        results["ctrl_break_group"] = {"child_exit": e_exit, "grandchild_alive_after": heartbeat_alive(hb)}
+    finally:
+        cleanup_tree(proc, hb)
     return results
 
 
@@ -184,34 +197,48 @@ def probe_job_object(tmp: Path) -> dict[str, Any]:
                     ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t),
                     ("PeakJobMemoryUsed", ctypes.c_size_t)]
 
-    job = k32.CreateJobObjectW(None, None)
-    info = EXT()
-    info.Basic.LimitFlags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-    ok_set = k32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info))
-    # 자식이 손자를 만들기 전에 job에 넣기 위해 suspended로 만들 수 없으므로(표준 Popen),
-    # 손자 생성 전에 바로 넣고, 결과에 그 한계를 적는다.
-    hb = tmp / "d.hb"
-    script = tmp / "child.py"
-    proc = subprocess.Popen([sys.executable, str(script), str(hb)])
-    handle = k32.OpenProcess(0x0001 | 0x0100 | 0x1000, False, proc.pid)  # TERMINATE | SET_QUOTA | QUERY_LIMITED
-    ok_assign = k32.AssignProcessToJobObject(job, handle)
-    for _ in range(50):
-        if hb.exists():
-            break
-        time.sleep(0.1)
-    ok_term = k32.TerminateJobObject(job, 1)
-    proc.wait(timeout=10)
-    alive = heartbeat_alive(hb)
-    k32.CloseHandle(handle)
-    k32.CloseHandle(job)
-    gpid = grandchild_pid(hb)
-    if gpid and alive:
-        kill_pid(gpid)
-    return {
-        "set_info_ok": bool(ok_set), "assign_ok": bool(ok_assign), "terminate_ok": bool(ok_term),
-        "child_exit": proc.returncode, "grandchild_alive_after": alive,
+    result: dict[str, Any] = {
         "note": "Popen 직후 job에 넣었다. 그 사이에 손자가 생기면 job 밖에 남을 수 있다",
     }
+    hb = tmp / "d.hb"
+    script = tmp / "child.py"
+    job = None
+    handle = None
+    proc: subprocess.Popen[bytes] | None = None
+    try:
+        job = k32.CreateJobObjectW(None, None)
+        if not job:
+            result["error"] = f"CreateJobObjectW 실패: {ctypes.get_last_error()}"
+            return result
+        info = EXT()
+        info.Basic.LimitFlags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        result["set_info_ok"] = bool(k32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info)))
+        # 표준 Popen은 suspended로 만들 수 없어서 시작 직후 job에 넣는다.
+        proc = subprocess.Popen([sys.executable, str(script), str(hb)])
+        handle = k32.OpenProcess(0x0001 | 0x0100 | 0x1000, False, proc.pid)  # TERMINATE | SET_QUOTA | QUERY_LIMITED
+        if not handle:
+            result["error"] = f"OpenProcess 실패: {ctypes.get_last_error()}"
+            return result
+        result["assign_ok"] = bool(k32.AssignProcessToJobObject(job, handle))
+        if not result["assign_ok"]:
+            result["error"] = f"AssignProcessToJobObject 실패: {ctypes.get_last_error()}"
+            return result
+        for _ in range(50):
+            if hb.exists():
+                break
+            time.sleep(0.1)
+        result["terminate_ok"] = bool(k32.TerminateJobObject(job, 1))
+        proc.wait(timeout=10)
+        result["child_exit"] = proc.returncode
+        result["grandchild_alive_after"] = heartbeat_alive(hb)
+        return result
+    finally:
+        # 할당이나 종료가 실패해 job 밖에 남은 프로세스도 정리한다.
+        cleanup_tree(proc, hb)
+        if handle:
+            k32.CloseHandle(handle)
+        if job:
+            k32.CloseHandle(job)
 
 
 def run(argv: list[str], **kw: Any) -> dict[str, Any]:
@@ -315,18 +342,23 @@ ARG_CASES = [
 ]
 
 
+# wrapper.cmd 안에 경로를 쓰지 않고 환경 변수로 넘긴다. 파일은 ASCII로만 쓰므로
+# cmd의 code page(65001, 949)와 ANSI 인코딩이 달라도 내용이 깨지지 않는다.
+WRAPPER_ENV: dict[str, str] = {}
+
+
 def _wrapper_case(arg: str, argv: list[str] | None = None, cmdline: str | None = None) -> dict[str, Any]:
     """argv면 subprocess의 기본 변환(list2cmdline)을, cmdline이면 그 문자열을 그대로 CreateProcess에 넘긴다."""
     if cmdline is not None:
         try:
-            p = subprocess.run(cmdline, capture_output=True, timeout=60)
+            p = subprocess.run(cmdline, capture_output=True, timeout=60, env=WRAPPER_ENV)
             r = {"exit_code": p.returncode, "stdout_bytes": p.stdout, "stderr_bytes": p.stderr}
         except (OSError, subprocess.TimeoutExpired) as exc:
             r = {"exit_code": None, "error": repr(exc), "stdout_bytes": b"", "stderr_bytes": b""}
         line = cmdline
     else:
         assert argv is not None
-        r = run(argv)
+        r = run(argv, env=WRAPPER_ENV)
         line = subprocess.list2cmdline(argv)
     stdout = text(r["stdout_bytes"]).strip()
     try:
@@ -351,7 +383,9 @@ def probe_cmd_wrapper(tmp: Path) -> dict[str, Any]:
     dumper = tmp / "dump_args.py"
     dumper.write_text("import sys, json\nprint(json.dumps(sys.argv[1:], ensure_ascii=True))\n", encoding="utf-8")
     # 받은 인자를 그대로 Python에 넘긴다. gradlew.bat, mvnw.cmd의 "%*" 전달과 같은 방식이다.
-    body = f'@echo off\r\n"{sys.executable}" "{dumper}" %*\r\n'.encode("mbcs")
+    WRAPPER_ENV.clear()
+    WRAPPER_ENV.update(os.environ, PROBE_PY=sys.executable, PROBE_DUMPER=str(dumper))
+    body = b'@echo off\r\n"%PROBE_PY%" "%PROBE_DUMPER%" %*\r\n'
     spaced_dir = tmp / "dir with space 한글"
     spaced_dir.mkdir()
     spaced = spaced_dir / "wrapper.cmd"
