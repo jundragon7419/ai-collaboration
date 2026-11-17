@@ -194,9 +194,35 @@ G6:
 
 결론: G1, G2, G3, G5, G6의 판정 근거(exit code, tree 비교, `status --porcelain`, push 결과)는 Windows Git 2.53에서도 같다. 다른 점은 오류 문구, 경로 표기, 서명 실패 stderr다. Git 출력의 문구와 경로 문자열로 판정하지 않고 exit code, object ID, NUL 구분 경로로 판정해야 한다. Windows에서 사람 입력을 기다리는 서명 프로그램의 동작은 미확인이다.
 
+## 상속 환경 변수 처리
+
+이슈 #14에서 오케스트레이터가 실행하는 git의 환경 변수 처리를 정했다. 구현은 `src/aicollab/workspace/git.py`다.
+
+재확인(2026-11-17, Linux, Git 2.43.0, 임시 저장소 A와 B):
+
+- cwd가 B이고 `GIT_DIR`이 A의 `.git`이면 `git worktree add -b aicollab/run-x`가 exit 0으로 끝나고 branch는 A에 생겼다. B에는 생기지 않았다.
+- `GIT_DIR`과 `GIT_WORK_TREE`가 A를 가리키면 `git -C B rev-parse --show-toplevel`이 A를 출력했다.
+- `GIT_INDEX_FILE`이 다른 파일을 가리키면 B의 `git status`가 tracked 파일을 삭제와 untracked로 표시했다.
+- `GIT_CONFIG_COUNT`와 `GIT_CONFIG_KEY_0`, `GIT_CONFIG_VALUE_0` 또는 `GIT_CONFIG_PARAMETERS`로 `core.hooksPath`를 주면 B의 commit에서 외부 pre-commit이 실행됐다. `git config --show-scope`는 이 값을 `command` 범위로 표시했다.
+
+Windows에서는 이 재확인을 실행하지 않았다.
+
+| 변수 | 처리 | 근거 |
+|---|---|---|
+| `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`, `GIT_NAMESPACE`, `GIT_PREFIX` | 항상 지운다. 지운 변수 이름을 run 시작에 경고로 표시하고 기록한다 | 위 재확인에서 다른 저장소가 바뀌었다. 원본을 바꾸지 않는다는 [D09](../05-open-decisions.md#d09-미커밋-변경)를 지키려면 대상 저장소가 cwd로 고정돼야 한다 |
+| `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_*`, `GIT_CONFIG_VALUE_*`, `GIT_CONFIG_PARAMETERS`, `GIT_CONFIG_GLOBAL`, `GIT_CONFIG_SYSTEM`, `GIT_CONFIG_NOSYSTEM` | 그대로 넘긴다. run 시작에 변수 이름과 설정 key를 경고로 표시한다. 값은 기록하지 않고 전체의 SHA-256만 남긴다 | [D06](../05-open-decisions.md#d06-위협-모델) trusted-local에서 호출 환경은 사용자의 것이고, hooks를 평소처럼 실행한다는 결정과 맞는다. 값에는 인증 정보가 들어갈 수 있다 |
+| 그 밖의 `GIT_*` (`GIT_SSH_COMMAND`, `GIT_ASKPASS`, `GIT_AUTHOR_*`, `GIT_COMMITTER_*` 등) | 그대로 넘기고 경고하지 않는다 | 사용자의 인증과 identity 설정이다 |
+
+변수 이름은 대소문자를 구분하지 않고 본다. SHA-256은 변수 이름 순으로 정렬한 `이름 NUL 값 NUL`의 연결에 대해 계산한다. `GIT_CONFIG_PARAMETERS`에서 key를 꺼내지 못하면 key를 `<해석 실패>`로 표시한다.
+
+이 처리는 확인 실험 스크립트의 처리와 다르다. 스크립트는 실험 저장소를 격리하려고 `GIT_`로 시작하는 변수를 모두 지운다. 오케스트레이터는 사용자의 평소 Git 동작을 유지해야 하므로 위치 변수만 지운다.
+
+snapshot 수집은 오케스트레이터가 직접 `GIT_INDEX_FILE`을 임시 파일로 지정해 `git read-tree HEAD`, `git add -A`, `git write-tree`를 실행한다. 작업 공간의 실제 index는 바뀌지 않는다. 이때 만든 blob과 tree object는 원본 저장소의 object DB에 남는다.
+
 ## 남은 미확인
 
 - Windows에서 입력을 기다리는 서명 프로그램의 동작과 시간 상한으로 끊었을 때의 상태. 스크립트의 Windows용 대기 프로그램이 대기하지 않았다
 - 실제 서명 프로그램과 agent의 사람 개입 여부
 - 시간 상한으로 git을 끊었을 때 서명 프로그램 자식 프로세스가 남는지
 - `gh pr create`의 실제 push 동작. gh 2.100.0의 도움말만 확인했다
+- Windows에서 상속 `GIT_DIR`, `GIT_INDEX_FILE`, 명령 범위 설정 변수의 영향. Linux에서만 재확인했다
