@@ -1,0 +1,439 @@
+{
+  "environment": {
+    "probe": "windows-network-block",
+    "issue": 30,
+    "started_at": "2026-11-17T15:35:12+09:00",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.15",
+    "node": "v24.14.0",
+    "npm": "11.9.0",
+    "uv": "uv 0.12.23 (46b84fd0b 2026-10-03 x86_64-pc-windows-msvc)",
+    "git": "git version 2.53.0.windows.2",
+    "curl": "curl 8.22.0 (Windows) libcurl/8.22.0 Schannel zlib/1.3.2 WinIDN WinLDAP",
+    "inherited_proxy_env_names": []
+  },
+  "checks": {
+    "N1": {
+      "title": "프록시 환경 변수와 offline 설정",
+      "observed": {
+        "targets": {
+          "pypi": "https://pypi.org/simple/six/",
+          "npm": "https://registry.npmjs.org/is-number",
+          "socket": "pypi.org:443"
+        },
+        "baseline": {
+          "python_urllib": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.47,
+            "reached_network": true
+          },
+          "python_raw_socket": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "connected",
+            "stderr": "",
+            "seconds": 0.17,
+            "reached_network": true
+          },
+          "node_fetch": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.47,
+            "reached_network": true
+          },
+          "node_https": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.16,
+            "reached_network": true
+          },
+          "curl": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.25,
+            "reached_network": true
+          },
+          "pip_download": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "Collecting six==1.16.0\r\n  Downloading six-1.16.0-py2.py3-none-any.whl.metadata (1.8 kB)\r\nDownloading six-1.16.0-py2.py3-none-any.whl (11 kB)\r\nSaved .\\pip-dl\\six-1.16.0-py2.py3-none-any.whl\r\nSuccessfully downloaded six",
+            "stderr": "",
+            "seconds": 2.9,
+            "reached_network": true
+          },
+          "npm_view": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "7.0.0",
+            "stderr": "",
+            "seconds": 7.32,
+            "reached_network": true
+          },
+          "uv_pip_dry_run": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "Using Python 3.13.15 environment at: <HOME>\\AppData\\Local\\Programs\\Python\\Python313\nResolved 1 package in 307ms\nWould download 1 package\nWould uninstall 1 package\nWould install 1 package\n - six==1.17.0\n + six==1.16.0",
+            "seconds": 0.7,
+            "reached_network": true
+          },
+          "git_ls_remote": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "e1ec09b23c8e0deb21a0b95ac5996422277395d4\tHEAD",
+            "stderr": "",
+            "seconds": 0.99,
+            "reached_network": true
+          }
+        },
+        "proxy_env": {
+          "python_urllib": {
+            "exit_code": 1,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "ib\\request.py\", line 466, in _call_chain\r\n    result = func(*args)\r\n  File \"<HOME>\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\urllib\\request.py\", line 1366, in https_open\r\n    return self.do_open(http.client.HTTPSConnection, req,\r\n           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n                        context=self._context)\r\n                        ^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<HOME>\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\urllib\\request.py\", line 1321, in do_open\r\n    raise URLError(err)\r\nurllib.error.URLError: <urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>",
+            "seconds": 2.34,
+            "reached_network": false
+          },
+          "python_raw_socket": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "connected",
+            "stderr": "",
+            "seconds": 0.13,
+            "reached_network": true
+          },
+          "node_fetch": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.79,
+            "reached_network": true
+          },
+          "node_https": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.26,
+            "reached_network": true
+          },
+          "curl": {
+            "exit_code": 7,
+            "timed_out": false,
+            "stdout": "000",
+            "stderr": "curl: (7) Failed to connect to pypi.org:443 over proxy 127.0.0.1 after 0 ms: Could not connect to server",
+            "seconds": 0.03,
+            "reached_network": false
+          },
+          "pip_download": {
+            "exit_code": 1,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "ERROR: Could not find a version that satisfies the requirement six==1.16.0 (from versions: none)\r\nERROR: No matching distribution found for six==1.16.0",
+            "seconds": 3.41,
+            "reached_network": false
+          },
+          "npm_view": {
+            "exit_code": 1,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": ")\nnpm error     at process.processTicksAndRejections (node:internal/process/task_queues:91:21) {\nnpm error   code: 'ECONNREFUSED',\nnpm error   errno: 'ECONNREFUSED',\nnpm error   syscall: 'connect',\nnpm error   address: '127.0.0.1',\nnpm error   port: 9,\nnpm error   type: 'system'\nnpm error }\nnpm error\nnpm error If you are behind a proxy, please make sure that the\nnpm error 'proxy' config is set properly.  See: 'npm help config'\nnpm error A complete log of this run can be found in: <HOME>\\AppData\\Local\\Temp\\aicollab-netblock-93fzm2mq\\cache\\proxy_env\\npm\\_logs\\2026-11-17T06_35_34_359Z-debug-0.log",
+            "seconds": 1.41,
+            "reached_network": false
+          },
+          "uv_pip_dry_run": {
+            "exit_code": 2,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "Using Python 3.13.15 environment at: <HOME>\\AppData\\Local\\Programs\\Python\\Python313\nerror: Request failed after 3 retries in 16.2s\n  cause: Failed to fetch: https://pypi.org/simple/six/\n  cause: error sending request for url (https://pypi.org/simple/six/)\n  cause: client error (Connect)\n  cause: tunnel error: failed to create underlying connection\n  cause: tcp connect error\n  cause: 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다. (os error 10061)",
+            "seconds": 16.5,
+            "reached_network": false
+          },
+          "git_ls_remote": {
+            "exit_code": 128,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "fatal: unable to access 'https://github.com/git/git.git/': Failed to connect to github.com port 443 via 127.0.0.1 after 2063 ms: Could not connect to server",
+            "seconds": 2.31,
+            "reached_network": false
+          }
+        },
+        "proxy_env_node": {
+          "python_urllib": {
+            "exit_code": 1,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "ib\\request.py\", line 466, in _call_chain\r\n    result = func(*args)\r\n  File \"<HOME>\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\urllib\\request.py\", line 1366, in https_open\r\n    return self.do_open(http.client.HTTPSConnection, req,\r\n           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n                        context=self._context)\r\n                        ^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<HOME>\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\urllib\\request.py\", line 1321, in do_open\r\n    raise URLError(err)\r\nurllib.error.URLError: <urlopen error [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다>",
+            "seconds": 2.34,
+            "reached_network": false
+          },
+          "python_raw_socket": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "connected",
+            "stderr": "",
+            "seconds": 0.09,
+            "reached_network": true
+          },
+          "node_fetch": {
+            "exit_code": 2,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "ECONNREFUSED",
+            "seconds": 0.1,
+            "reached_network": false
+          },
+          "node_https": {
+            "exit_code": 2,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "ECONNREFUSED",
+            "seconds": 0.1,
+            "reached_network": false
+          },
+          "curl": {
+            "exit_code": 7,
+            "timed_out": false,
+            "stdout": "000",
+            "stderr": "curl: (7) Failed to connect to pypi.org:443 over proxy 127.0.0.1 after 1 ms: Could not connect to server",
+            "seconds": 0.04,
+            "reached_network": false
+          },
+          "pip_download": {
+            "exit_code": 1,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "ERROR: Could not find a version that satisfies the requirement six==1.16.0 (from versions: none)\r\nERROR: No matching distribution found for six==1.16.0",
+            "seconds": 3.49,
+            "reached_network": false
+          },
+          "npm_view": {
+            "exit_code": 1,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": " error     at process.processTicksAndRejections (node:internal/process/task_queues:91:21) {\nnpm error   code: 'ECONNREFUSED',\nnpm error   errno: 'ECONNREFUSED',\nnpm error   syscall: 'connect',\nnpm error   address: '127.0.0.1',\nnpm error   port: 9,\nnpm error   type: 'system'\nnpm error }\nnpm error\nnpm error If you are behind a proxy, please make sure that the\nnpm error 'proxy' config is set properly.  See: 'npm help config'\nnpm error A complete log of this run can be found in: <HOME>\\AppData\\Local\\Temp\\aicollab-netblock-93fzm2mq\\cache\\proxy_env_node\\npm\\_logs\\2026-11-17T06_36_00_771Z-debug-0.log",
+            "seconds": 1.28,
+            "reached_network": false
+          },
+          "uv_pip_dry_run": {
+            "exit_code": 2,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "Using Python 3.13.15 environment at: <HOME>\\AppData\\Local\\Programs\\Python\\Python313\nerror: Request failed after 3 retries in 13.3s\n  cause: Failed to fetch: https://pypi.org/simple/six/\n  cause: error sending request for url (https://pypi.org/simple/six/)\n  cause: client error (Connect)\n  cause: tunnel error: failed to create underlying connection\n  cause: tcp connect error\n  cause: 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다. (os error 10061)",
+            "seconds": 13.52,
+            "reached_network": false
+          },
+          "git_ls_remote": {
+            "exit_code": 128,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "fatal: unable to access 'https://github.com/git/git.git/': Failed to connect to github.com port 443 via 127.0.0.1 after 2067 ms: Could not connect to server",
+            "seconds": 2.23,
+            "reached_network": false
+          }
+        },
+        "offline_flags": {
+          "python_urllib": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.26,
+            "reached_network": true
+          },
+          "python_raw_socket": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "connected",
+            "stderr": "",
+            "seconds": 0.15,
+            "reached_network": true
+          },
+          "node_fetch": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.25,
+            "reached_network": true
+          },
+          "node_https": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.2,
+            "reached_network": true
+          },
+          "curl": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "200",
+            "stderr": "",
+            "seconds": 0.17,
+            "reached_network": true
+          },
+          "pip_download": {
+            "exit_code": 1,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "ERROR: Could not find a version that satisfies the requirement six==1.16.0 (from versions: none)\r\nERROR: No matching distribution found for six==1.16.0",
+            "seconds": 1.13,
+            "reached_network": false
+          },
+          "npm_view": {
+            "exit_code": 1,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "npm error code ENOTCACHED\nnpm error request to https://registry.npmjs.org/is-number failed: cache mode is 'only-if-cached' but no cached response is available.\nnpm error A complete log of this run can be found in: <HOME>\\AppData\\Local\\Temp\\aicollab-netblock-93fzm2mq\\cache\\offline_flags\\npm\\_logs\\2026-11-17T06_36_19_908Z-debug-0.log",
+            "seconds": 1.18,
+            "reached_network": false
+          },
+          "uv_pip_dry_run": {
+            "exit_code": 1,
+            "timed_out": false,
+            "stdout": "",
+            "stderr": "Using Python 3.13.15 environment at: <HOME>\\AppData\\Local\\Programs\\Python\\Python313\nerror: No solution found when resolving dependencies\n  cause: Because six was not found in the cache and you require six==1.16.0, we can conclude that your requirements are unsatisfiable.\n\nhint: Packages were unavailable because the network was disabled. When the network is disabled, registry packages may only be read from the cache.",
+            "seconds": 0.23,
+            "reached_network": false
+          },
+          "git_ls_remote": {
+            "exit_code": 0,
+            "timed_out": false,
+            "stdout": "e1ec09b23c8e0deb21a0b95ac5996422277395d4\tHEAD",
+            "stderr": "",
+            "seconds": 0.93,
+            "reached_network": true
+          }
+        },
+        "summary": {
+          "baseline": {
+            "python_urllib": true,
+            "python_raw_socket": true,
+            "node_fetch": true,
+            "node_https": true,
+            "curl": true,
+            "pip_download": true,
+            "npm_view": true,
+            "uv_pip_dry_run": true,
+            "git_ls_remote": true
+          },
+          "proxy_env": {
+            "python_urllib": false,
+            "python_raw_socket": true,
+            "node_fetch": true,
+            "node_https": true,
+            "curl": false,
+            "pip_download": false,
+            "npm_view": false,
+            "uv_pip_dry_run": false,
+            "git_ls_remote": false
+          },
+          "proxy_env_node": {
+            "python_urllib": false,
+            "python_raw_socket": true,
+            "node_fetch": false,
+            "node_https": false,
+            "curl": false,
+            "pip_download": false,
+            "npm_view": false,
+            "uv_pip_dry_run": false,
+            "git_ls_remote": false
+          },
+          "offline_flags": {
+            "python_urllib": true,
+            "python_raw_socket": true,
+            "node_fetch": true,
+            "node_https": true,
+            "curl": true,
+            "pip_download": false,
+            "npm_view": false,
+            "uv_pip_dry_run": false,
+            "git_ls_remote": true
+          }
+        }
+      }
+    },
+    "N2": {
+      "title": "AppContainer",
+      "observed": {
+        "profile_name": "aicollab.probe.netblock.<pid>",
+        "create_profile_hresult": "0x0",
+        "icacls_grant_exit": 0,
+        "delete_profile_hresult": "0x0",
+        "cases": {
+          "read_granted_file": {
+            "command": "type readme.txt",
+            "internet_capability": false,
+            "exit_code": 0,
+            "timed_out": false,
+            "output": "probe file"
+          },
+          "write_granted_dir": {
+            "command": "echo written> written.txt && type written.txt",
+            "internet_capability": false,
+            "exit_code": 0,
+            "timed_out": false,
+            "output": "written"
+          },
+          "curl_no_capability": {
+            "command": "\"C:\\Windows\\System32\\curl.exe\" -sS -m 15 -o NUL -w \"%{http_code}\" https://pypi.org/simple/six/",
+            "internet_capability": false,
+            "exit_code": 6,
+            "timed_out": false,
+            "output": "curl: (6) Could not resolve host: pypi.org\r\n000"
+          },
+          "curl_grandchild_no_capability": {
+            "command": "cmd.exe /d /c \"\"C:\\Windows\\System32\\curl.exe\" -sS -m 15 -o NUL -w \"%{http_code}\" https://pypi.org/simple/six/\"",
+            "internet_capability": false,
+            "exit_code": 6,
+            "timed_out": false,
+            "output": "curl: (6) Could not resolve host: pypi.org\r\n000"
+          },
+          "curl_with_internet_client": {
+            "command": "\"C:\\Windows\\System32\\curl.exe\" -sS -m 15 -o NUL -w \"%{http_code}\" https://pypi.org/simple/six/",
+            "internet_capability": true,
+            "exit_code": 0,
+            "timed_out": false,
+            "output": "200"
+          },
+          "python_start_no_capability": {
+            "command": "\"<HOME>\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" -c \"print(1)\"",
+            "internet_capability": false,
+            "exit_code": 1,
+            "timed_out": false,
+            "output": "액세스가 거부되었습니다."
+          },
+          "read_user_home_no_grant": {
+            "command": "dir \"<HOME>\" /b | find /c /v \"\"",
+            "internet_capability": false,
+            "exit_code": 1,
+            "timed_out": false,
+            "output": "0"
+          }
+        }
+      }
+    },
+    "N3": {
+      "title": "Windows Firewall 상태와 권한",
+      "observed": {
+        "is_admin": false,
+        "show_currentprofile_exit": 0,
+        "show_currentprofile": "Public Profile Settings: \r\n----------------------------------------------------------------------\r\nState                                 ON\r\nOk.",
+        "note": "규칙 추가는 시험하지 않았다. 시스템 설정을 바꾸기 때문이다."
+      }
+    }
+  },
+  "script_errors": {}
+}

@@ -115,7 +115,7 @@ local-committed, pushed, draft-created와 committed-unverified를 구분한다. 
 
 | 단계 | 작업과 완료 기준 |
 |---|---|
-| 0 | Python 실행 환경과 두 CLI의 최소 버전, 구조화 출력, native 및 WSL2 경로, prepare와 check 네트워크 구분, 프로세스 종료와 Git 동작을 확인. 미확인 기능을 성공으로 표시하지 않음. M0(#3부터 #7까지)에서 실행했고 결과는 [docs/probes/](probes/README.md)에 있다. WSL2, check 네트워크 차단, 한도 오류, 실제 서명과 gh는 남은 미확인이다 |
+| 0 | Python 실행 환경과 두 CLI의 최소 버전, 구조화 출력, native 및 WSL2 경로, prepare와 check 네트워크 구분, 프로세스 종료와 Git 동작을 확인. 미확인 기능을 성공으로 표시하지 않음. M0(#3부터 #7까지)에서 실행했고 결과는 [docs/probes/](probes/README.md)에 있다. WSL2, 한도 오류, 실제 서명과 gh는 남은 미확인이다. check 네트워크 차단 방식은 #30에서 후보를 확인했고 D17로 남겼다 |
 | 1 | setup, 배정 명령, flow 2종과 prepare, tester 및 check, P gate와 무변경 종료, 평소 hooks 및 사용자 commit, 확인 후 publish 구현 |
 | 2 | 실행 이력과 비교 실험, custom probe와 준비 캐시의 사용성 개선, 필요한 역할 확장 |
 | 이후 별도 검토 | untrusted 저장소와 prompt injection 방어, OS 수준 경로별 사전 차단과 controller 격리. MVP 완료 조건에 포함하지 않음 |
