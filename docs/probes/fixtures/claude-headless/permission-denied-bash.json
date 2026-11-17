@@ -1,0 +1,126 @@
+{
+  "argv": [
+    "claude",
+    "-p",
+    "--output-format",
+    "json",
+    "--no-session-persistence",
+    "--model",
+    "claude-haiku-5-5",
+    "--tools",
+    "Read,Bash"
+  ],
+  "exit_code": 0,
+  "stdout_json": {
+    "duration_api_ms": 7148,
+    "stop_reason": "end_turn",
+    "session_id": "<UUID>",
+    "total_cost_usd": 0.02207534,
+    "usage": {
+      "input_tokens": 6,
+      "cache_creation_input_tokens": 106788,
+      "cache_read_input_tokens": 14214,
+      "output_tokens": 1150,
+      "output_tokens_details": {
+        "thinking_tokens": 494
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 106788,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 720,
+          "cache_read_input_tokens": 5533,
+          "cache_creation_input_tokens": 58104,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 58104
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-haiku-5-5": {
+        "inputTokens": 6,
+        "outputTokens": 1150,
+        "cacheReadInputTokens": 14214,
+        "cacheCreationInputTokens": 106788,
+        "webSearchRequests": 0,
+        "costUSD": 0.02207534,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 494,
+        "cacheCreationEphemeral5mInputTokens": 0,
+        "cacheCreationEphemeral1hInputTokens": 106788,
+        "canonicalModel": "claude-haiku-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "permission_denials": [
+      {
+        "tool_name": "Bash",
+        "tool_use_id": "toolu_<ID>",
+        "tool_input": {
+          "command": "cd \"<TMP>/work\" && printf 'hello\\n' > probe-bash_listed_not_allowed.txt && cat probe-bash_listed_not_allowed.txt",
+          "description": "Create probe file containing hello and print it back"
+        }
+      }
+    ],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": false,
+    "num_turns": 3,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "파일을 만들지 못했습니다. `Write` 도구는 이 세션에서 비활성화되어 있었고, `Bash`로 쓰려고 하자 작업 디렉터리 안 파일 생성에 승인이 필요하다는 응답이 와서 실행이 막혔습니다. 승인을 우회하는 다른 경로(예: Drive나 Docs 같은 MCP 도구)로 대신 만들지는 않았습니다. 로컬 파일이 아니라서 목적에 맞지 않기 때문입니다.\n\n이 작업을 허용하려면 아래 명령을 승인해 주세요.\n\n```\nprintf 'hello\\n' > \"<TMP>/work/probe-bash_listed_not_allowed.txt\"\n```\n\n승인 후 다시 요청해 주시면 바로 생성하고 내용을 확인하겠습니다.",
+    "ttft_ms": 1087,
+    "type": "result",
+    "duration_ms": 7333,
+    "uuid": "<UUID>",
+    "ttft_stream_ms": 960,
+    "time_to_request_ms": 121,
+    "first_content_frame_ms": 960,
+    "queued_turn_count": 0,
+    "result_index": 0
+  },
+  "stdout_text": null,
+  "stderr": ""
+}
