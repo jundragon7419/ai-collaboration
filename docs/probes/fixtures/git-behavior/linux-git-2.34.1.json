@@ -1,0 +1,158 @@
+{
+  "environment": {
+    "probe": "git-behavior",
+    "issue": 6,
+    "started_at": "2026-11-17T01:16:43+00:00",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "git_version": "git version 2.34.1",
+    "locale_env": {
+      "LANG": "C.UTF-8"
+    }
+  },
+  "checks": {
+    "G1": {
+      "title": "worktree 생성과 정리",
+      "observed": {
+        "add_exit": 0,
+        "list_porcelain": "worktree <TMP>/g1/repo\nHEAD 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb\nbranch refs/heads/main\n\nworktree <TMP>/g1/wt\nHEAD 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb\nbranch refs/heads/aicollab/run-1",
+        "duplicate_branch_exit": 255,
+        "duplicate_branch_stderr": "fatal: A branch named 'aicollab/run-1' already exists.",
+        "remove_with_untracked_exit": 128,
+        "remove_with_untracked_stderr": "fatal: '<TMP>/g1/wt' contains modified or untracked files, use --force to delete it",
+        "remove_force_exit": 0,
+        "branch_kept_after_remove": true,
+        "list_after_manual_delete": "worktree <TMP>/g1/repo\nHEAD 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb\nbranch refs/heads/main\n\nworktree <TMP>/g1/wt3\nHEAD 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb\nbranch refs/heads/aicollab/run-3\nprunable gitdir file points to non-existent location",
+        "prune_after_manual_delete": "Removing worktrees/wt3: gitdir file points to non-existent location"
+      }
+    },
+    "G2": {
+      "title": "worktree 안 커밋에서 hooks 실행",
+      "observed": {
+        "commit_exit": 0,
+        "hook_log_add_and_commit": [
+          "post-checkout pwd=<TMP>/g2/wt git_dir= args=0000000000000000000000000000000000000000 11fd30ee6a34765c6a4a54e6430963a5e1eb91bb 1",
+          "pre-commit pwd=<TMP>/g2/wt git_dir=<TMP>/g2/repo/.git/worktrees/wt args=",
+          "commit-msg pwd=<TMP>/g2/wt git_dir=<TMP>/g2/repo/.git/worktrees/wt args=<TMP>/g2/repo/.git/worktrees/wt/COMMIT_EDITMSG",
+          "post-commit pwd=<TMP>/g2/wt git_dir=<TMP>/g2/repo/.git/worktrees/wt args="
+        ],
+        "hook_log_added_by_no_verify": [
+          "post-commit pwd=<TMP>/g2/wt git_dir=<TMP>/g2/repo/.git/worktrees/wt args="
+        ],
+        "hooks_dir_from_worktree": "<TMP>/g2/repo/.git/hooks"
+      }
+    },
+    "G3": {
+      "title": "hook이 파일을 바꿀 때 tree 불일치 탐지",
+      "observed": {
+        "pre_commit_restage": {
+          "commit_exit": 0,
+          "expected_tree": "3474d4ce35117acc5ecd39fc7ad350b06796eb45",
+          "actual_tree": "b97d524762aef21850dde1a87a54648535532274",
+          "tree_mismatch": true,
+          "status_after": ""
+        },
+        "pre_commit_worktree_only": {
+          "commit_exit": 0,
+          "tree_mismatch": false,
+          "status_after": "M src.txt"
+        },
+        "post_commit_mutation": {
+          "commit_exit": 0,
+          "tree_mismatch": false,
+          "status_after": "M src.txt"
+        },
+        "pre_commit_fail": {
+          "commit_exit": 1,
+          "stderr": "blocked by hook",
+          "head_moved": false
+        },
+        "commit_msg_mutation": {
+          "final_message": "original\nSigned-off-by: hook"
+        }
+      }
+    },
+    "G4": {
+      "title": "사람 개입 서명 설정 탐지",
+      "observed": {
+        "user_signing_config_keys": [],
+        "user_signing_config_exit": 1,
+        "detect_output": "local\tfile:.git/config\tcommit.gpgsign true",
+        "detect_bool": "true",
+        "failing_program": {
+          "commit_exit": 128,
+          "stderr": "error: gpg failed to sign the data\nfatal: failed to write commit object",
+          "head_moved": false
+        },
+        "waiting_program_stdin_pipe": {
+          "exit_code": -9,
+          "timed_out": true,
+          "stderr": "",
+          "seconds": 5.007,
+          "head_moved": false,
+          "index_lock_left": false
+        },
+        "ssh_format_without_key": {
+          "commit_exit": 128,
+          "stderr": "fatal: either user.signingkey or gpg.ssh.defaultKeyCommand needs to be configured"
+        }
+      }
+    },
+    "G5": {
+      "title": "변경 없음 판정",
+      "observed": {
+        "base_tree": "b9a90f470606989b82713e9192630faf344362d7",
+        "untouched": {
+          "write_tree": "b9a90f470606989b82713e9192630faf344362d7",
+          "same_as_base": true,
+          "diff_cached_quiet_exit": 0,
+          "status": ""
+        },
+        "commit_without_change": {
+          "exit_code": 1,
+          "stdout": "On branch main\nnothing to commit, working tree clean",
+          "stderr": ""
+        },
+        "changed_then_reverted": {
+          "write_tree": "b9a90f470606989b82713e9192630faf344362d7",
+          "same_as_base": true,
+          "diff_cached_quiet_exit": 0,
+          "status": ""
+        },
+        "ignored_dependency_dirs": {
+          "write_tree": "b9a90f470606989b82713e9192630faf344362d7",
+          "same_as_base": true,
+          "diff_cached_quiet_exit": 0,
+          "status": ""
+        },
+        "crlf_status_before_add": "M src.txt",
+        "crlf_rewrite_with_eol_lf": {
+          "write_tree": "b9a90f470606989b82713e9192630faf344362d7",
+          "same_as_base": true,
+          "diff_cached_quiet_exit": 0,
+          "status": "",
+          "raw_bytes_changed": true
+        }
+      }
+    },
+    "G6": {
+      "title": "push lease와 gh pr create의 push 동작",
+      "observed": {
+        "create_only_lease": {
+          "first_exit": 0,
+          "first_stdout": "To <TMP>/g6/remote.git\n*\tHEAD:refs/heads/aicollab/run-6\t[new branch]\nDone",
+          "second_exit": 1,
+          "second_stdout": "To <TMP>/g6/remote.git\n!\tHEAD:refs/heads/aicollab/run-6\t[rejected] (stale info)\nDone",
+          "second_stderr": "error: failed to push some refs to '<TMP>/g6/remote.git'"
+        },
+        "push_dry_run": {
+          "exit": 0,
+          "ref_created": false
+        },
+        "gh_path_found": false
+      }
+    }
+  },
+  "script_errors": {},
+  "note": "results.json의 checks.*.observed만 옮겼다. 단계별 원본 출력(steps)은 뺐다."
+}
