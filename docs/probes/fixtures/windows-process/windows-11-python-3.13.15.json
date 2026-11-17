@@ -1,0 +1,805 @@
+{
+  "environment": {
+    "probe": "windows-process",
+    "issue": 5,
+    "started_at": "2026-11-17T13:36:44+09:00",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.15",
+    "is_windows": true
+  },
+  "checks": {
+    "W1": {
+      "title": "시간 상한 뒤 자식 프로세스까지 종료",
+      "observed": {
+        "popen_kill_only": {
+          "child_exit": 1,
+          "grandchild_alive_after": true
+        },
+        "subprocess_run_timeout": {
+          "timeout_raised": true,
+          "grandchild_alive_after": true
+        },
+        "taskkill_tree": {
+          "taskkill_exit": 0,
+          "stdout": "SUCCESS: The process with PID 20032 (child process of PID 16288) has been terminated.\nSUCCESS: The process with PID 16288 (child process of PID 24140) has been terminated.",
+          "grandchild_alive_after": false
+        },
+        "job_object": {
+          "set_info_ok": true,
+          "assign_ok": true,
+          "terminate_ok": true,
+          "child_exit": 1,
+          "grandchild_alive_after": false,
+          "note": "Popen 직후 job에 넣었다. 그 사이에 손자가 생기면 job 밖에 남을 수 있다"
+        },
+        "ctrl_break_group": {
+          "child_exit": 3221225786,
+          "grandchild_alive_after": false
+        }
+      }
+    },
+    "W2": {
+      "title": "npm과 npx를 node로 직접 실행할 때 경로 탐색",
+      "observed": {
+        "which": {
+          "node": "C:\\Program Files\\nodejs\\node.EXE",
+          "npm": "C:\\Program Files\\nodejs\\npm.CMD",
+          "npx": "C:\\Program Files\\nodejs\\npx.CMD",
+          "corepack": "C:\\Program Files\\nodejs\\corepack.CMD",
+          "nvm": null,
+          "volta": null,
+          "fnm": null
+        },
+        "where_npm": [
+          "C:\\Program Files\\nodejs\\npm",
+          "C:\\Program Files\\nodejs\\npm.cmd"
+        ],
+        "where_node": [
+          "C:\\Program Files\\nodejs\\node.exe"
+        ],
+        "env": {},
+        "node_resolved": "C:\\Program Files\\nodejs\\node.exe",
+        "node_version": "v24.14.0",
+        "npm_shim_mentions_corepack": false,
+        "npm_shim_first_lines": [
+          ":: Created by npm, please don't edit manually.",
+          "@ECHO OFF",
+          "",
+          "SETLOCAL",
+          "",
+          "SET \"NODE_EXE=%~dp0\\node.exe\"",
+          "IF NOT EXIST \"%NODE_EXE%\" (",
+          "  SET \"NODE_EXE=node\"",
+          ")",
+          "",
+          "SET \"NPM_PREFIX_JS=%~dp0\\node_modules\\npm\\bin\\npm-prefix.js\"",
+          "SET \"NPM_CLI_JS=%~dp0\\node_modules\\npm\\bin\\npm-cli.js\""
+        ],
+        "npm_prefix_g": "<HOME>\\AppData\\Roaming\\npm",
+        "js_entry_candidates": {
+          "next_to_node": {
+            "dir": "C:\\Program Files\\nodejs\\node_modules\\npm\\bin",
+            "npm-cli.js": true,
+            "npm-cli.js_version": "11.9.0",
+            "npm-cli.js_exit": 0,
+            "npx-cli.js": true,
+            "npx-cli.js_version": "11.9.0",
+            "npx-cli.js_exit": 0
+          },
+          "next_to_npm_cmd": {
+            "dir": "C:\\Program Files\\nodejs\\node_modules\\npm\\bin",
+            "npm-cli.js": true,
+            "npm-cli.js_version": "11.9.0",
+            "npm-cli.js_exit": 0,
+            "npx-cli.js": true,
+            "npx-cli.js_version": "11.9.0",
+            "npx-cli.js_exit": 0
+          },
+          "global_prefix": {
+            "dir": "<HOME>\\AppData\\Roaming\\npm\\node_modules\\npm\\bin",
+            "npm-cli.js": false,
+            "npx-cli.js": false
+          }
+        },
+        "npm_cmd_version": "11.9.0",
+        "npx_cmd_version": "11.9.0",
+        "corepack_version": "0.34.6"
+      }
+    },
+    "W3": {
+      "title": "cmd /d /s /c wrapper 인자 처리",
+      "observed": {
+        "argv_spaced_path": [
+          {
+            "sent": "plain",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" plain",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "with space",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"with space\"",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "한글 인자",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"한글 인자\"",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "quote\"inside",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" quote\\\"inside",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "trailing\\",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" trailing\\",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "a&echo INJECTED_AMP",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"a&echo INJECTED_AMP\"",
+            "exit_code": 0,
+            "received": null,
+            "same": false,
+            "injected": true,
+            "stdout": "INJECTED_AMP",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "a|echo INJECTED_PIPE",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"a|echo INJECTED_PIPE\"",
+            "exit_code": 255,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "%PATHEXT%",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" %PATHEXT%",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "caret^x",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" caret^x",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "(paren)",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" (paren)",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "!bang!",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" !bang!",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          },
+          {
+            "sent": "",
+            "command_line": "cmd.exe /d /s /c \"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"\"",
+            "exit_code": 1,
+            "received": null,
+            "same": false,
+            "injected": false,
+            "stdout": "",
+            "stderr": "'<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+          }
+        ],
+        "argv_plain_path": [
+          {
+            "sent": "plain",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd plain",
+            "exit_code": 0,
+            "received": [
+              "plain"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"plain\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "with space",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd \"with space\"",
+            "exit_code": 0,
+            "received": [
+              "with space"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"with space\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "한글 인자",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd \"한글 인자\"",
+            "exit_code": 0,
+            "received": [
+              "한글 인자"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"\\ud55c\\uae00 \\uc778\\uc790\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "quote\"inside",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd quote\\\"inside",
+            "exit_code": 0,
+            "received": [
+              "quote\"inside"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"quote\\\"inside\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "trailing\\",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd trailing\\",
+            "exit_code": 0,
+            "received": [
+              "trailing\\"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"trailing\\\\\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "a&echo INJECTED_AMP",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd \"a&echo INJECTED_AMP\"",
+            "exit_code": 0,
+            "received": [
+              "a&echo INJECTED_AMP"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"a&echo INJECTED_AMP\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "a|echo INJECTED_PIPE",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd \"a|echo INJECTED_PIPE\"",
+            "exit_code": 0,
+            "received": [
+              "a|echo INJECTED_PIPE"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"a|echo INJECTED_PIPE\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "%PATHEXT%",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd %PATHEXT%",
+            "exit_code": 0,
+            "received": [
+              ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC"
+            ],
+            "same": false,
+            "injected": false,
+            "stdout": "[\".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "caret^x",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd caret^x",
+            "exit_code": 0,
+            "received": [
+              "caretx"
+            ],
+            "same": false,
+            "injected": false,
+            "stdout": "[\"caretx\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "(paren)",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd (paren)",
+            "exit_code": 0,
+            "received": [
+              "(paren)"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"(paren)\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "!bang!",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd !bang!",
+            "exit_code": 0,
+            "received": [
+              "!bang!"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"!bang!\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "",
+            "command_line": "cmd.exe /d /s /c <HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\plain\\wrapper.cmd \"\"",
+            "exit_code": 0,
+            "received": [
+              ""
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"\"]",
+            "stderr": ""
+          }
+        ],
+        "outer_quoted_spaced_path": [
+          {
+            "sent": "plain",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" plain\"",
+            "exit_code": 0,
+            "received": [
+              "plain"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"plain\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "with space",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"with space\"\"",
+            "exit_code": 0,
+            "received": [
+              "with space"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"with space\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "한글 인자",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"한글 인자\"\"",
+            "exit_code": 0,
+            "received": [
+              "한글 인자"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"\\ud55c\\uae00 \\uc778\\uc790\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "quote\"inside",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" quote\\\"inside\"",
+            "exit_code": 0,
+            "received": [
+              "quote\"inside"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"quote\\\"inside\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "trailing\\",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" trailing\\\"",
+            "exit_code": 0,
+            "received": [
+              "trailing\\"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"trailing\\\\\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "a&echo INJECTED_AMP",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"a&echo INJECTED_AMP\"\"",
+            "exit_code": 0,
+            "received": [
+              "a&echo INJECTED_AMP"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"a&echo INJECTED_AMP\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "a|echo INJECTED_PIPE",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"a|echo INJECTED_PIPE\"\"",
+            "exit_code": 0,
+            "received": [
+              "a|echo INJECTED_PIPE"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"a|echo INJECTED_PIPE\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "%PATHEXT%",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" %PATHEXT%\"",
+            "exit_code": 0,
+            "received": [
+              ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC"
+            ],
+            "same": false,
+            "injected": false,
+            "stdout": "[\".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "caret^x",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" caret^x\"",
+            "exit_code": 0,
+            "received": [
+              "caretx"
+            ],
+            "same": false,
+            "injected": false,
+            "stdout": "[\"caretx\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "(paren)",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" (paren)\"",
+            "exit_code": 0,
+            "received": [
+              "(paren)"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"(paren)\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "!bang!",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" !bang!\"",
+            "exit_code": 0,
+            "received": [
+              "!bang!"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"!bang!\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "",
+            "command_line": "cmd.exe /d /s /c \"\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"\"\"",
+            "exit_code": 0,
+            "received": [
+              ""
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"\"]",
+            "stderr": ""
+          }
+        ],
+        "direct_cmd_popen": [
+          {
+            "sent": "plain",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" plain",
+            "exit_code": 0,
+            "received": [
+              "plain"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"plain\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "with space",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"with space\"",
+            "exit_code": 0,
+            "received": [
+              "with space"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"with space\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "한글 인자",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"한글 인자\"",
+            "exit_code": 0,
+            "received": [
+              "한글 인자"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"\\ud55c\\uae00 \\uc778\\uc790\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "quote\"inside",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" quote\\\"inside",
+            "exit_code": 0,
+            "received": [
+              "quote\"inside"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"quote\\\"inside\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "trailing\\",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" trailing\\",
+            "exit_code": 0,
+            "received": [
+              "trailing\\"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"trailing\\\\\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "a&echo INJECTED_AMP",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"a&echo INJECTED_AMP\"",
+            "exit_code": 0,
+            "received": [
+              "a&echo INJECTED_AMP"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"a&echo INJECTED_AMP\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "a|echo INJECTED_PIPE",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"a|echo INJECTED_PIPE\"",
+            "exit_code": 0,
+            "received": [
+              "a|echo INJECTED_PIPE"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"a|echo INJECTED_PIPE\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "%PATHEXT%",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" %PATHEXT%",
+            "exit_code": 0,
+            "received": [
+              ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC"
+            ],
+            "same": false,
+            "injected": false,
+            "stdout": "[\".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "caret^x",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" caret^x",
+            "exit_code": 0,
+            "received": [
+              "caretx"
+            ],
+            "same": false,
+            "injected": false,
+            "stdout": "[\"caretx\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "(paren)",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" (paren)",
+            "exit_code": 0,
+            "received": [
+              "(paren)"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"(paren)\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "!bang!",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" !bang!",
+            "exit_code": 0,
+            "received": [
+              "!bang!"
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"!bang!\"]",
+            "stderr": ""
+          },
+          {
+            "sent": "",
+            "command_line": "\"<HOME>\\AppData\\Local\\Temp\\aicollab-winproc-l9atsq6v\\dir with space 한글\\wrapper.cmd\" \"\"",
+            "exit_code": 0,
+            "received": [
+              ""
+            ],
+            "same": true,
+            "injected": false,
+            "stdout": "[\"\"]",
+            "stderr": ""
+          }
+        ],
+        "summary": {
+          "argv_spaced_path": {
+            "same": 0,
+            "total": 12,
+            "injected": [
+              "a&echo INJECTED_AMP"
+            ],
+            "different": [
+              "plain",
+              "with space",
+              "한글 인자",
+              "quote\"inside",
+              "trailing\\",
+              "a&echo INJECTED_AMP",
+              "a|echo INJECTED_PIPE",
+              "%PATHEXT%",
+              "caret^x",
+              "(paren)",
+              "!bang!",
+              ""
+            ]
+          },
+          "argv_plain_path": {
+            "same": 10,
+            "total": 12,
+            "injected": [],
+            "different": [
+              "%PATHEXT%",
+              "caret^x"
+            ]
+          },
+          "outer_quoted_spaced_path": {
+            "same": 10,
+            "total": 12,
+            "injected": [],
+            "different": [
+              "%PATHEXT%",
+              "caret^x"
+            ]
+          },
+          "direct_cmd_popen": {
+            "same": 10,
+            "total": 12,
+            "injected": [],
+            "different": [
+              "%PATHEXT%",
+              "caret^x"
+            ]
+          }
+        }
+      }
+    },
+    "W4": {
+      "title": "출력 인코딩",
+      "observed": {
+        "locale_preferred": "cp949",
+        "sys_stdout_encoding": "cp949",
+        "filesystem_encoding": "utf-8",
+        "python_utf8_mode": 0,
+        "env": {},
+        "cases": {
+          "python_child_default": {
+            "exit_code": 0,
+            "hex_head": "c7d1b1db20c3e2b7c220c8aec0ce0d0a",
+            "utf8_ok": false,
+            "cp949_ok": true,
+            "as_text": "한글 출력 확인"
+          },
+          "node_console_log": {
+            "exit_code": 0,
+            "hex_head": "ed959ceab88020ecb69ceba0a520ed9995ec9db80a",
+            "utf8_ok": true,
+            "cp949_ok": false,
+            "as_text": "한글 출력 확인"
+          },
+          "cmd_chcp": {
+            "exit_code": 0,
+            "hex_head": "41637469766520636f646520706167653a2036353030310d0a",
+            "utf8_ok": true,
+            "cp949_ok": true,
+            "as_text": "Active code page: 65001"
+          },
+          "cmd_echo": {
+            "exit_code": 0,
+            "hex_head": "ed959ceab88020ecb69ceba0a520ed9995ec9db80d0a",
+            "utf8_ok": true,
+            "cp949_ok": false,
+            "as_text": "한글 출력 확인"
+          },
+          "cmd_dir_korean_name": {
+            "exit_code": 0,
+            "hex_head": "612e68620d0a612e68622e7069640d0a622e68620d0a622e68622e7069640d0a632e68620d0a632e68622e7069640d0a6368696c642e70790d0a642e68620d0a642e68622e7069640d0a646972207769",
+            "utf8_ok": true,
+            "cp949_ok": false,
+            "as_text": "a.hb\r\na.hb.pid\r\nb.hb\r\nb.hb.pid\r\nc.hb\r\nc.hb.pid\r\nchild.py\r\nd.hb\r\nd.hb.pid\r\ndir with space 한글\r\ndump_args.py\r\ne.hb\r\ne.hb.pid\r\nplain\r\n한글파일.txt"
+          },
+          "python_child_pythonioencoding_utf8": {
+            "exit_code": 0,
+            "hex_head": "ed959ceab88020ecb69ceba0a520ed9995ec9db80d0a",
+            "utf8_ok": true,
+            "cp949_ok": false,
+            "as_text": "한글 출력 확인"
+          },
+          "git_log_message": {
+            "exit_code": 0,
+            "hex_head": "ed959ceab88020ecbba4ebb08b20eba994ec8b9ceca7800a",
+            "utf8_ok": true,
+            "as_text": "한글 커밋 메시지"
+          },
+          "git_status_quotepath_default": {
+            "exit_code": 0,
+            "hex_head": "",
+            "utf8_ok": true,
+            "as_text": ""
+          },
+          "git_ls_files_quotepath_default": {
+            "exit_code": 0,
+            "hex_head": "225c3335355c3232355c3233345c3335325c3237305c3230302e747874220a",
+            "utf8_ok": true,
+            "as_text": "\"\\355\\225\\234\\352\\270\\200.txt\""
+          },
+          "git_ls_files_z": {
+            "exit_code": 0,
+            "hex_head": "ed959ceab8802e74787400",
+            "utf8_ok": true,
+            "as_text": "한글.txt\u0000"
+          }
+        }
+      }
+    }
+  },
+  "script_errors": {},
+  "note": "windows_process.py가 만든 results.json 그대로다. 홈 경로는 <HOME>, 사용자 이름은 <USER>로 바꿨다. 실행 콘솔의 code page는 65001이었다."
+}
