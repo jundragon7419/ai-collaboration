@@ -1,0 +1,48 @@
+{
+  "argv": [
+    "codex",
+    "-a",
+    "never",
+    "--sandbox",
+    "read-only",
+    "exec",
+    "--skip-git-repo-check",
+    "-C",
+    "<TMP>\\ws5\\work",
+    "--ephemeral",
+    "-m",
+    "gpt-probe-nonexistent-0",
+    "--json",
+    "-"
+  ],
+  "exit_code": 1,
+  "events": [
+    {
+      "type": "thread.started",
+      "thread_id": "<UUID>"
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_0",
+        "type": "error",
+        "message": "Model metadata for `gpt-probe-nonexistent-0` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+      }
+    },
+    {
+      "type": "turn.started"
+    },
+    {
+      "type": "error",
+      "message": "The 'gpt-probe-nonexistent-0' model is not supported when using Codex with a ChatGPT account."
+    },
+    {
+      "type": "turn.failed",
+      "error": {
+        "message": "The 'gpt-probe-nonexistent-0' model is not supported when using Codex with a ChatGPT account."
+      }
+    }
+  ],
+  "non_json_stdout": [],
+  "stderr": "2026-11-17T04:43:44.698747Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+}
