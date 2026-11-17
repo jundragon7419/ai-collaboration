@@ -1,0 +1,84 @@
+{
+  "argv": [
+    "codex",
+    "-a",
+    "never",
+    "--sandbox",
+    "read-only",
+    "exec",
+    "--skip-git-repo-check",
+    "-C",
+    "<TMP>\\ws20\\work",
+    "--ephemeral",
+    "-m",
+    "gpt-6-astra",
+    "--json",
+    "-"
+  ],
+  "exit_code": 1,
+  "events": [
+    {
+      "type": "thread.started",
+      "thread_id": "<UUID>"
+    },
+    {
+      "type": "turn.started"
+    },
+    {
+      "type": "error",
+      "message": "Reconnecting... 2/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: <RAY>)"
+    },
+    {
+      "type": "error",
+      "message": "Reconnecting... 3/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: <RAY>)"
+    },
+    {
+      "type": "error",
+      "message": "Reconnecting... 4/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: <RAY>)"
+    },
+    {
+      "type": "error",
+      "message": "Reconnecting... 5/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: <RAY>)"
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_0",
+        "type": "error",
+        "message": "Falling back from WebSockets to HTTPS transport. unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: <RAY>"
+      }
+    },
+    {
+      "type": "error",
+      "message": "Reconnecting... 1/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: <RAY>, request id: req_<ID>)"
+    },
+    {
+      "type": "error",
+      "message": "Reconnecting... 2/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: <RAY>, request id: req_<ID>)"
+    },
+    {
+      "type": "error",
+      "message": "Reconnecting... 3/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: <RAY>, request id: req_<ID>)"
+    },
+    {
+      "type": "error",
+      "message": "Reconnecting... 4/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: <RAY>, request id: req_<ID>)"
+    },
+    {
+      "type": "error",
+      "message": "Reconnecting... 5/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: <RAY>, request id: req_<ID>)"
+    },
+    {
+      "type": "error",
+      "message": "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: <RAY>, request id: req_<ID>"
+    },
+    {
+      "type": "turn.failed",
+      "error": {
+        "message": "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: <RAY>, request id: req_<ID>"
+      }
+    }
+  ],
+  "non_json_stdout": [],
+  "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"<HOME>\\\\AppData\\\\Local\\\\Temp\\\\\" (codex_home: AbsolutePathBuf(\"<TMP>\\\\empty-codex-home\"))\n2026-11-17T04:47:09.230765Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n2026-11-17T04:47:09.633282Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:09.740854Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:10.075042Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:10.638420Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:11.517186Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:13.285473Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n2026-11-17T04:47:16.321388Z ERROR codex_api::endpoint::responses_websocket: failed to connect to Responses WebSocket stage=Unknown\n"
+}

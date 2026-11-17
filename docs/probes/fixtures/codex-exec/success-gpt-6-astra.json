@@ -1,0 +1,50 @@
+{
+  "argv": [
+    "codex",
+    "-a",
+    "never",
+    "--sandbox",
+    "read-only",
+    "exec",
+    "--skip-git-repo-check",
+    "-C",
+    "<TMP>\\ws1\\work",
+    "--ephemeral",
+    "-m",
+    "gpt-6-astra",
+    "--json",
+    "-o",
+    "<TMP>\\ws1\\last.txt",
+    "-"
+  ],
+  "exit_code": 0,
+  "events": [
+    {
+      "type": "thread.started",
+      "thread_id": "<UUID>"
+    },
+    {
+      "type": "turn.started"
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_0",
+        "type": "agent_message",
+        "text": "OK"
+      }
+    },
+    {
+      "type": "turn.completed",
+      "usage": {
+        "input_tokens": 20474,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 5,
+        "reasoning_output_tokens": 0
+      }
+    }
+  ],
+  "non_json_stdout": [],
+  "stderr": "2026-11-17T04:43:15.528032Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+}

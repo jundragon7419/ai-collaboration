@@ -1,0 +1,44 @@
+{
+  "argv": [
+    "codex",
+    "-a",
+    "never",
+    "--sandbox",
+    "read-only",
+    "exec",
+    "--skip-git-repo-check",
+    "-C",
+    "<TMP>\\ws9\\work",
+    "--ephemeral",
+    "-m",
+    "gpt-6-astra",
+    "--json",
+    "-o",
+    "<TMP>\\ws9\\last.txt",
+    "--output-schema",
+    "<TMP>\\ws9\\schema.json",
+    "-"
+  ],
+  "exit_code": 1,
+  "events": [
+    {
+      "type": "thread.started",
+      "thread_id": "<UUID>"
+    },
+    {
+      "type": "turn.started"
+    },
+    {
+      "type": "error",
+      "message": "{\"type\":\"error\",\"error\":{\"message\":\"Invalid schema for response_format 'codex_output_schema': 'schema.required' is required to include every key in properties. Missing 'extra'.\",\"type\":\"invalid_request_error\",\"param\":\"text.format.schema\",\"code\":\"invalid_json_schema\"},\"status\":400}"
+    },
+    {
+      "type": "turn.failed",
+      "error": {
+        "message": "{\"type\":\"error\",\"error\":{\"message\":\"Invalid schema for response_format 'codex_output_schema': 'schema.required' is required to include every key in properties. Missing 'extra'.\",\"type\":\"invalid_request_error\",\"param\":\"text.format.schema\",\"code\":\"invalid_json_schema\"},\"status\":400}"
+      }
+    }
+  ],
+  "non_json_stdout": [],
+  "stderr": "2026-11-17T04:45:35.781389Z ERROR codex_core::session::session: failed to load skill <HOME>\\.agents\\skills\\claude-md-conventions\\SKILL.md: missing YAML frontmatter delimited by ---\n"
+}
