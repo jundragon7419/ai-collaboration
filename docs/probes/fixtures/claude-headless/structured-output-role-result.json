@@ -1,0 +1,152 @@
+{
+  "argv": [
+    "claude",
+    "-p",
+    "--output-format",
+    "json",
+    "--no-session-persistence",
+    "--model",
+    "claude-haiku-5-5",
+    "--json-schema",
+    "<긴 인자 생략>"
+  ],
+  "exit_code": 0,
+  "stdout_json": {
+    "duration_api_ms": 3044,
+    "stop_reason": "tool_use",
+    "session_id": "<UUID>",
+    "total_cost_usd": 0.0058853,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 27618,
+      "cache_read_input_tokens": 0,
+      "output_tokens": 723,
+      "output_tokens_details": {
+        "thinking_tokens": 301
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 27618,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 723,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 27618,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 27618
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-haiku-5-5": {
+        "inputTokens": 2,
+        "outputTokens": 723,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 27618,
+        "webSearchRequests": 0,
+        "costUSD": 0.0058853,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 301,
+        "cacheCreationEphemeral5mInputTokens": 0,
+        "cacheCreationEphemeral1hInputTokens": 27618,
+        "canonicalModel": "claude-haiku-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": false,
+    "num_turns": 2,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"schema_version\":2,\"kind\":\"plan\",\"status\":\"completed\",\"summary\":\"probe\",\"questions\":[],\"plan\":{\"goal\":\"\",\"criteria\":[],\"steps\":[],\"scope_paths\":[],\"check_ids\":[],\"test_contract\":\"\",\"new_dependencies_required\":false,\"dependency_reason\":\"\"},\"implementation\":{\"description\":\"\",\"changed_paths\":[],\"addressed_criteria\":[]},\"testing\":{\"description\":\"\",\"changed_paths\":[],\"covered_criteria\":[]},\"review\":{\"criteria\":[],\"findings\":[],\"failure_attribution\":\"not-applicable\",\"repair_targets\":[],\"execution_assessment\":\"not-applicable\"},\"observations\":[]}",
+    "structured_output": {
+      "schema_version": 2,
+      "kind": "plan",
+      "status": "completed",
+      "summary": "probe",
+      "questions": [],
+      "plan": {
+        "goal": "",
+        "criteria": [],
+        "steps": [],
+        "scope_paths": [],
+        "check_ids": [],
+        "test_contract": "",
+        "new_dependencies_required": false,
+        "dependency_reason": ""
+      },
+      "implementation": {
+        "description": "",
+        "changed_paths": [],
+        "addressed_criteria": []
+      },
+      "testing": {
+        "description": "",
+        "changed_paths": [],
+        "covered_criteria": []
+      },
+      "review": {
+        "criteria": [],
+        "findings": [],
+        "failure_attribution": "not-applicable",
+        "repair_targets": [],
+        "execution_assessment": "not-applicable"
+      },
+      "observations": []
+    },
+    "ttft_ms": 2225,
+    "type": "result",
+    "duration_ms": 3200,
+    "uuid": "<UUID>",
+    "ttft_stream_ms": 1021,
+    "time_to_request_ms": 154,
+    "first_content_frame_ms": 1021,
+    "queued_turn_count": 0,
+    "result_index": 0
+  },
+  "stdout_text": null,
+  "stderr": ""
+}
