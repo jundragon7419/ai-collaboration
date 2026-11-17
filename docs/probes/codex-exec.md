@@ -16,7 +16,7 @@
 - `codex`는 PATH에 없었다. PowerShell의 `Get-Command codex`도 찾지 못했다. Codex 앱 패키지 안 `C:\Program Files\WindowsApps\OpenAI.Codex_<버전>\app\resources\codex.exe`도 있었지만 `--version` 출력이 비어 있어 쓰지 않았다.
 - 기존 기록의 Codex CLI는 `0.169.0-alpha.11.1`([04-review C05](../04-review.md#명령-실행-기록))이었다. 이번에 쓴 실행 파일과 버전이 다르다. 어느 경로에서 실행했는지에 따라 버전이 달라질 수 있다.
 
-모든 호출의 기본 형태는 다음과 같다. prompt는 stdin으로 넘겼다. 작업 폴더는 임시 디렉터리다. 상속 `GIT_*` 환경 변수는 빼고 실행했다. 인증 파일은 읽지 않았다.
+모든 호출의 기본 형태는 다음과 같다. prompt는 stdin으로 넘겼다. 작업 폴더는 임시 디렉터리다. 모델 ID와 최소 CLI 버전은 `docs/02-config-spec.md`의 provider registry JSON에서 읽는다(리뷰 반영으로 스크립트 상수를 없앴다. 실행 당시 상수는 registry와 같은 값이었다). 상속 `GIT_*` 환경 변수는 빼고 실행했다. 인증 파일은 읽지 않았다.
 
 ```shell
 codex -a never --sandbox <mode> exec --skip-git-repo-check -C <작업 폴더> --ephemeral -m <모델> --json -o <파일> -
