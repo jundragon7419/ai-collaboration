@@ -27,14 +27,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-MODELS = ["claude-opus-5-5", "claude-fable-5-2", "claude-sonnet-5-5", "claude-haiku-5-5"]
-MIN_VERSION = {
-    "claude-opus-5-5": "2.1.280",
-    "claude-fable-5-2": "2.1.321",
-    "claude-sonnet-5-5": "2.1.284",
-    "claude-haiku-5-5": "2.1.293",
-}
-CHEAP_ORDER = ["claude-haiku-5-5", "claude-sonnet-5-5"]
 EFFORTS = ["low", "medium", "high", "xhigh", "max", "bogus-effort"]
 AUTH_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL")
 TIMEOUT = 240
@@ -121,6 +113,24 @@ def summarize(res: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def load_registry_models(repo_root: Path, provider: str) -> list[dict[str, Any]]:
+    """docs/02-config-spec.md의 provider registry JSON에서 모델 목록을 읽는다.
+
+    모델 ID와 최소 버전은 registry 한 곳에만 둔다(AGENTS.md). registry 코드(#10)가 생기기 전이라
+    문서의 registry 원문을 읽는다. 저장소 루트에서 실행해야 한다.
+    """
+    doc = repo_root / "docs" / "02-config-spec.md"
+    text = doc.read_text(encoding="utf-8")
+    start = text.find("## provider registry와 최소 버전")
+    m = re.search(r"```json\n(.*?)\n```", text[start:], re.S) if start >= 0 else None
+    if not m:
+        raise SystemExit("docs/02-config-spec.md에서 provider registry를 찾지 못함. 저장소 루트에서 실행해야 함")
+    for entry in json.loads(m.group(1))["providers"]:
+        if entry["id"] == provider:
+            return list(entry["models"])
+    raise SystemExit(f"registry에 {provider} provider가 없음")
+
+
 def load_role_result_schema(repo_root: Path) -> dict[str, Any] | None:
     doc = repo_root / "docs" / "03-roles-and-handoff.md"
     if not doc.exists():
@@ -173,6 +183,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default=None)
     parser.add_argument("--only", default="version,models,tools,schema,errors,effort")
+    parser.add_argument("--model", default=None, help="tools, schema, errors, effort 시험에 쓸 모델. 기본은 registry 순서에서 마지막으로 성공한 모델")
     args = parser.parse_args()
     only = set(args.only.split(","))
 
@@ -209,18 +220,22 @@ def main() -> int:
         lines = [ln.strip() for ln in help_["stdout"].splitlines() if re.search(r"--(effort|tools|allowedTools|json-schema|output-format|no-session-persistence|model|max-turns|permission-mode)\b", ln)]
         rec.checks["C0"] = {"title": "버전과 도움말", "observed": {"version": cli_version, "help_lines": lines}}
 
+    registry = load_registry_models(Path.cwd(), "claude")
+    models = [m["id"] for m in registry]
+    min_version = {m["id"]: m["min_cli_version"] for m in registry}
     working_cheap: str | None = None
     if "models" in only:
         obs = {}
-        for model in MODELS:
-            meets = version_tuple(cli_version) >= version_tuple(MIN_VERSION[model]) if version_tuple(cli_version) else None
+        for model in models:
+            meets = version_tuple(cli_version) >= version_tuple(min_version[model]) if version_tuple(cli_version) and version_tuple(min_version[model]) else None
             r = rec.run([*base, "--model", model], work, "Reply with exactly: OK")
             raw[f"model_{model}"] = r
             s = summarize(r)
-            s["min_cli_version"] = MIN_VERSION[model]
+            s["min_cli_version"] = min_version[model]
             s["installed_meets_min"] = meets
             obs[model] = s
-        for model in CHEAP_ORDER:
+        # registry 순서에서 마지막으로 성공한 모델을 이후 시험에 쓴다. 현재 registry에서는 가장 가벼운 모델이다.
+        for model in reversed(models):
             s = obs[model]
             if s["exit_code"] == 0 and not s["is_error"]:
                 working_cheap = model
@@ -229,7 +244,7 @@ def main() -> int:
         raw["model_invalid"] = bad
         obs["invalid_model_id"] = summarize(bad)
         rec.checks["C1"] = {"title": "전체 모델 ID 4개 지정", "observed": obs}
-    cheap = working_cheap or "claude-haiku-5-5"
+    cheap = args.model or working_cheap or models[-1]
 
     if "tools" in only:
         obs = {}
