@@ -118,7 +118,8 @@ def tool_cases(tmp: Path) -> dict[str, list[str] | None]:
         "curl": [curl, "-sS", "-m", "15", "-o", os.devnull, "-w", "%{http_code}", URL_PYPI] if curl else None,
         "pip_download": [py, "-m", "pip", "download", "six==1.16.0", "--no-deps", "-d", str(dl), "--disable-pip-version-check", "--timeout", "10", "--retries", "0"],
         "npm_view": [npm, "view", "is-number", "version", "--fetch-retries", "0", "--fetch-timeout", "15000"] if npm else None,
-        "uv_pip_dry_run": [uv, "pip", "install", "--dry-run", "--python", py, "six==1.16.0", "--no-cache"] if uv else None,
+        # --reinstall: six==1.16.0이 이미 설치돼 있으면 uv가 네트워크 없이 exit 0으로 끝나 차단 여부를 판별하지 못한다.
+        "uv_pip_dry_run": [uv, "pip", "install", "--dry-run", "--reinstall", "--python", py, "six==1.16.0", "--no-cache"] if uv else None,
         "git_ls_remote": [git, "ls-remote", "https://github.com/git/git.git", "HEAD"] if git else None,
     }
 

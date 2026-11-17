@@ -18,6 +18,10 @@
 
 실행 전 환경에 상속된 프록시 변수는 없었다. 스크립트는 상속된 `GIT_*`, 이름에 `PROXY`가 들어간 변수, 패키지 관리자의 offline과 index 변수를 지우고 시작한다. npm cache는 후보마다 따로 둬서 앞 후보의 cache가 다음 후보의 결과를 바꾸지 않게 했다. pip와 uv는 cache를 끄고 실행했다.
 
+리뷰 반영으로 실행 뒤 스크립트를 한 군데 고쳤다. 관찰 결과에는 영향이 없다.
+
+- uv 시험에 `--reinstall`을 더했다. 대상 Python에 `six==1.16.0`이 이미 설치돼 있으면 uv는 네트워크 없이 `Would make no changes`와 exit 0으로 끝나 닿음으로 잘못 기록된다(Linux, uv 0.11.32에서 `UV_OFFLINE=1`로 재현). 이번 실행의 대상 Python에는 `six==1.17.0`이 설치돼 있어 baseline에서 uv가 해석과 다운로드를 계획했고(`Would download 1 package`), proxy_env와 offline_flags에서는 실패했다. 따라서 기록된 uv 결과는 이미 설치된 패키지의 영향을 받지 않았다.
+
 관찰 원본은 [fixtures/windows-network-block/windows-11-python-3.13.15.json](fixtures/windows-network-block/windows-11-python-3.13.15.json)에 있다. 홈 경로는 `<HOME>`, AppContainer profile 이름의 PID는 `<pid>`로 바꿨다.
 
 ## 결과 요약
