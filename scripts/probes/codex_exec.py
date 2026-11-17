@@ -167,11 +167,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default=None)
     parser.add_argument("--only", default="version,models,sandbox,schema,events,effort,ephemeral,errors")
+    parser.add_argument("--codex", default=None, help="codex 실행 파일 경로. 생략하면 PATH에서 찾는다")
     parser.add_argument("--model", default=None, help="sandbox, schema, effort 시험에 쓸 모델. 기본은 models에서 처음 성공한 모델")
     args = parser.parse_args()
     only = set(args.only.split(","))
 
-    codex = shutil.which("codex")
+    codex = args.codex or shutil.which("codex")
+    if codex and not Path(codex).exists():
+        codex = shutil.which(codex)
     if not codex:
         print("codex 실행 파일을 찾지 못했습니다.", file=sys.stderr)
         return 2
