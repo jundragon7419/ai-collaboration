@@ -97,6 +97,8 @@ tracked와 승인 새 파일은 내용 hash를 계산하고, 그 밖의 ignored 
 
 Git hooks는 평소처럼 실행한다. hooksPath를 바꾸거나 no-verify로 우회하지 않는다. worktree 생성 hooks와 prepare 뒤에도 고정 HEAD의 소스를 확인한다. 원본이나 run source의 예상 밖 변경이 있으면 보존하고 중단한다. [Git hooks](https://git-scm.com/docs/githooks).
 
+오케스트레이터가 실행하는 git은 저장소 위치를 바꾸는 상속 환경 변수(`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE` 등)를 지우고 실행하며 지운 변수 이름을 run 시작에 경고로 표시한다. 명령 범위 설정 변수(`GIT_CONFIG_COUNT`, `GIT_CONFIG_PARAMETERS` 등)와 설정 파일 위치 변수는 그대로 넘기고 변수 이름과 설정 key를 경고로 표시하며, 값은 기록하지 않고 전체의 SHA-256만 남긴다. 그 밖의 `GIT_*` 변수는 그대로 넘긴다. 변수 목록과 근거는 [git-behavior 상속 환경 변수 처리](probes/git-behavior.md#상속-환경-변수-처리)에 있다.
+
 gate 이후 승인 파일의 Git 결과 tree가 base tree와 같으면 “변경 없음”으로 종료한다. 이 판정은 승인 파일을 stage한 뒤 `git write-tree`를 base commit의 tree와 비교하는 방식으로 M0에서 확인했다. 변경이 없을 때 `git commit`은 exit 1이므로 판정 뒤 commit을 호출하지 않는다. commit과 push, Draft PR은 실행하지 않는다. ignored 의존성이 생겼다는 이유로 코드 변경이 있다고 판단하지 않고 모델의 자기 보고로 무변경을 확정하지 않는다. 실패와 미완료를 무변경 성공으로 바꾸지 않는다.
 
 변경이 있으면 사용자 Git identity로 commit한다. 사람 개입이 필요한 서명은 commit 시작 전에 중단하고 알린다. 서명을 끄거나 unsigned로 바꾸지 않는다. 임의 signing program의 개입 여부를 설정만으로 완전히 예측한다고 보장하지 않는다. 무인 준비를 확인하지 못했으면 시작하지 않고 예상 밖 prompt와 timeout도 실패 처리한다. [Git signing 설정](https://git-scm.com/docs/git-config#Documentation/git-config.txt-gpgprogram).

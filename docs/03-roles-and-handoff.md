@@ -664,6 +664,8 @@ tracked 파일과 승인된 새 파일의 경로, Git mode와 실제 byte, 삭�
 
 Git index에는 attributes와 core.autocrlf에 따라 줄바꿈 등이 변환될 수 있으므로 raw snapshot hash와 Git blob hash를 직접 같다고 비교하지 않는다. 확인한 attributes 및 변환 정책과 expected_tree_oid를 commit 기록에 따로 둔다. source snapshot이 그대로이고 최종 tree가 승인한 대응 결과와 맞아야 한다. hooks와 filters는 평소대로 실행하지만 결과의 tree와 source가 검토한 상태와 다르면 중단하고 이미 생긴 commit은 committed-unverified로 기록한다. 자동 reset과 amend를 하지 않는다. [Git attributes](https://git-scm.com/docs/gitattributes).
 
+구현(`src/aicollab/audit/`)은 다음과 같다. 경로 목록은 `git ls-files -z`처럼 NUL 구분 출력으로만 받는다. ignore되지 않은 untracked 파일은 승인 여부와 무관하게 모두 내용 hash를 계산하고, 승인 범위 밖이면 역할 감사에서 위반으로 판정한다. ignored 폴더는 폴더 한 항목의 metadata만 기록하고 안을 읽지 않는다. 작업 공간 안에 다른 Git 저장소가 생기면 안을 읽지 않고 위반으로 판정한다. 전후 비교는 경로마다 raw byte 변경과 Git tree 변경을 따로 남긴다. run worktree는 `<run_root>/<run_id>/worktree`, 감사 기록과 위반 증거는 `<run_root>/<run_id>/audit/<순번>-<역할>/`에 둔다. run_root는 [02-config-spec](02-config-spec.md)의 `project.run_root`이며 원본 checkout과 공유 Git 관리 경로 밖 절대 경로다. 원본 저장소 안에는 run 기록을 만들지 않는다. run_root가 상대 경로이거나 원본 작업 트리 안, 공유 Git 관리 경로(`git rev-parse --git-common-dir`) 안이면 worktree를 만들기 전에 거부한다. 경로는 실제 경로로 풀어 비교하고 Windows에서는 대소문자를 구분하지 않는다. `project.run_root`의 기본값 계산은 설정 읽기 구현에서 하고, 작업 공간 모듈은 run_root를 필수 인자로 받는다. 위반이 있으면 위반 파일의 byte 사본과 실행 전후 tree의 patch를 함께 남기고 작업 공간은 되돌리지 않는다.
+
 검사 scratch는 소스와 겹치지 않아야 한다. source와 test 파일, lock 및 설정 파일이 check에서 바뀌면 중단한다. source digest를 계산하는 동안 파일이 달라지면 고정 후 다시 수집한다. Git 관리 경로와 제어 기록은 별도 감사 대상이다. 악의적 접근의 사전 차단을 완료 보장으로 쓰지 않는다.
 
 prepare/check/check-probe는 별도 stage 기록이다. prepare 성공과 check-probe의 유한 종료 관측을 run check의 성공으로 사용할 수 없다.
