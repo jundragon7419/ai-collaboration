@@ -12,9 +12,20 @@ setup 순서는 flow → 역할별 회사와 모델 → Claude 사용 시 환경
 
 정적 검증, doctor와 run 검증을 구분한다. unknown 키, 잘못된 타입, 중복 ID와 참조 오류를 거부한다. ID는 [a-z][a-z0-9_-]*를 사용하며 run_id는 시스템 생성 UUID다. 사용자 확인한 control 설정을 workspace 밖에 고정하고 hash를 기록한다. 미커밋 실행 설정을 사용하면 HEAD와의 차이를 표시하되 run 소스에 섞지 않는다.
 
+정적 검증은 `src/aicollab/config.py`의 `load_config()`와 `parse_config()`가 한다. 어긋난 항목을 모두 모아 `ConfigError`로 알리며, 항목마다 키 경로와 오류 코드를 가진다. 오류 코드는 unreadable, invalid-toml, missing-key, unknown-key, invalid-type, invalid-value, duplicate-id, unknown-reference, invalid-count, invalid-path, invalid-effort, conflict다. 최소 CLI 버전 미달은 오류가 아니다. `version_checks()`가 설치 버전, 최소 버전, 상태(ok, below-minimum, minimum-unknown, installed-unknown)를 경고 정보로 돌려준다.
+
+시점이 doctor나 run인 규칙(실행 파일, Git root, WSL 배포판, 절대 경로 확인 등)은 정적 검증에서 하지 않는다. effort 이름은 registry 목록으로 검사하고, 모델별 실제 지원은 doctor probe가 판정한다([effort 허용 값](#effort-허용-값)). 표에 값이 적히지 않아 구현에서 정한 규칙은 다음과 같다.
+
+- agents가 참조하는 회사마다 providers.<id> table이 있어야 한다.
+- prepare.dependency_paths는 키가 필수이고 빈 배열을 허용한다.
+- roles.<id>.access는 역할 기본 정책과 같은 값만 허용한다.
+- checks.commands[].trial은 source가 custom이면 doctor-once, candidate이면 not-required만 허용한다. doctor가 기록하는 pending, passed, failed는 설정에 쓸 수 없다.
+- 값만으로 판정되는 시간 관계를 정적으로 검사한다. pipeline.invocation_timeout_seconds는 run_timeout_seconds 이하이고, checks.commands[].timeout_seconds도 run_timeout_seconds 이하다.
+- 경로 키는 저장소 안의 상대 경로만 허용한다. 상위 경로, drive, UNC와 device 경로, Windows 예약 이름, 대소문자만 다른 중복을 거부한다.
+
 ## provider registry와 최소 버전
 
-Python의 provider_registry 모듈 한 곳에 회사별 모델과 근거 및 확인일을 둔다. UI와 프리셋 및 validator는 이 목록을 참조한다. 파일 이름 provider_registry.py는 설계 제안이다. 전체 모델 ID만 저장하고 별칭과 placeholder를 거부한다.
+Python의 provider_registry 모듈 한 곳에 회사별 모델과 근거 및 확인일을 둔다. UI와 프리셋 및 validator는 이 목록을 참조한다. 구현은 `src/aicollab/provider_registry.py`이고, `tests/test_provider_registry.py`가 아래 JSON과 표가 같은지 비교한다. 전체 모델 ID만 저장하고 별칭과 placeholder를 거부한다.
 
 ```json
 {
@@ -60,6 +71,15 @@ registry의 enabled는 메뉴 선택 대상이라는 뜻이며 계정 제공과 
 
 `min_cli_version`은 CLI가 그 모델 ID를 인식하는 첫 버전이다([D14](05-open-decisions.md#d14-fable과-최소-cli-버전-경고)). doctor는 실제 선택 runtime의 CLI 버전을 모델별 최소값과 비교한다. 미달이면 version-warning을 표시하고, 해당 agent의 probe 호출 결과로 사용 가능 여부를 판정한다. 경고에는 설치 버전과 최소 버전, CLI가 모델을 인식하지 못해 context window를 200K로 가정하고 effort 같은 기능이 기대대로 적용되지 않을 수 있다는 점, `claude update` 안내를 표시한다. 전체 ID와 최소 버전을 바꾸거나 자동 업데이트 및 fallback하지 않는다. 최소값 미확인은 버전 성공이 아니며 별도 기능 probe가 필요하다.
 
+### effort 허용 값
+
+registry는 회사별 effort 이름 목록을 두고, 모델별 목록이 있으면 그 목록이 우선한다. 정적 검증은 목록 밖 값을 invalid-effort로 거부한다. 모델별 실제 지원과 실효값은 doctor의 probe로 판정하며 정적 검증은 하지 않는다.
+
+- Claude: low, medium, high, xhigh, max. Claude Code는 알 수 없는 값을 경고 뒤 무시하고 기본값으로 진행하므로(exit 0) 정적 검증에서 막는다. 근거: [claude-headless C5](probes/claude-headless.md#c5---effort-값).
+- Codex: none, minimal, low, medium, high, xhigh, max. API가 알려 준 전체 값이다. 근거: [codex-exec X5](probes/codex-exec.md#x5-effort-값-이름).
+- gpt-6-astra: low, medium, high, xhigh, max. 이 모델은 minimal을 API가 거부했다(X5). 목록은 API 오류 메시지의 지원 값을 따르며 max와 none은 직접 호출하지 않았다.
+- 나머지 Codex 모델 3개는 지원 값을 시험하지 않아 모델별 목록 없이 회사 목록만 쓴다. minimal을 정적으로 허용하지만 실제 지원은 probe 전까지 미확인이다.
+
 ## project와 최상위
 
 | 이름 | 타입 | 기본값 또는 결정값 | 허용 값과 검증 규칙 | 시점 |
@@ -87,7 +107,7 @@ source와 test_paths의 경로 탈출, UNC와 device 경로, drive-relative 경�
 | providers.<id>.auth_expectation | string | subscription, 기존 MVP 제안 | 본인 기존 로그인 사용. 토큰 추출과 로그인 방식 자동 전환 없음 | doctor |
 | agents.<id>.provider | string | 필수 | 활성 registry의 등록 회사 | 정적 |
 | agents.<id>.model | string | 필수 | 등록 전체 ID와 일치. Gemini는 선택 불가 | 정적, doctor |
-| agents.<id>.effort | string | 생략, 모델 기본값 사용 제안 | provider와 모델의 지원을 확인. 실효값 미확인은 unknown | doctor |
+| agents.<id>.effort | string | 생략, 모델 기본값 사용 제안 | registry의 effort 이름 목록에 있는 값([허용 값](#effort-허용-값)). 모델별 실제 지원 확인과 실효값 미확인은 unknown | 정적, doctor |
 | agents.<id>.perspective | string | general, 제안 | general, adversarial, spec, security | 정적 |
 
 모델과 effort 변환은 Claude의 --model 및 --effort, Codex의 --model 및 -c model_reasoning_effort를 사용한다. 같은 agent를 여러 role에 배정해도 권한은 합치지 않는다.
@@ -197,7 +217,7 @@ Windows에서 Claude Code 2.1.316과 Codex CLI 0.167.0-alpha.3.2로 확인했다
 | 확장 설정 | 사용자 MCP 도구 노출 가능성 있음(미확인) | 사용자 홈의 `.agents\skills`를 읽음 |
 
 - 모델 응답 문장으로 판정하지 않는다는 원칙에 맞추려면 Claude 인증 오류는 `api_error_status`와 exit code를 우선 쓴다. 인증 없음을 가리키는 구조화 필드는 두 CLI 모두 없었다.
-- Claude는 알 수 없는 effort를 거부하지 않으므로 effort 값 검증은 오케스트레이터가 모델별로 한다.
+- Claude는 알 수 없는 effort를 거부하지 않으므로 오케스트레이터가 registry 목록으로 거부한다.
 - Codex read-only sandbox에서 명령 작업 폴더가 `-C`와 다르게 잡힌 관찰이 있다. 역할 prompt와 명령은 작업 폴더의 절대 경로를 써야 할 수 있다([04-review U13](04-review.md#미확인-사실과-확인-방법)).
 - Codex 명령 출력(`aggregated_output`)의 한글은 대체 문자로 손실될 수 있다. 판정 근거로 쓰지 않는다.
 - 한도 오류 형태는 두 CLI 모두 확인하지 못했다.
