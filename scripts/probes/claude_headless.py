@@ -55,6 +55,15 @@ def base_env() -> dict[str, str]:
     return {k: v for k, v in os.environ.items() if not k.upper().startswith("GIT_")}
 
 
+def _as_text(value: object) -> str:
+    """TimeoutExpired의 stdout과 stderr는 text=True여도 bytes일 수 있다. 문자열로 맞춘다."""
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 class Recorder:
     def __init__(self, tmp: Path, claude: str) -> None:
         self.tmp = tmp
@@ -81,7 +90,7 @@ class Recorder:
             )
             res: dict[str, Any] = {"exit_code": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "timed_out": False}
         except subprocess.TimeoutExpired as exc:
-            res = {"exit_code": None, "stdout": str(exc.stdout or ""), "stderr": str(exc.stderr or ""), "timed_out": True}
+            res = {"exit_code": None, "stdout": _as_text(exc.stdout), "stderr": _as_text(exc.stderr), "timed_out": True}
         res["argv"] = ["claude", *[self.anonymize(a) if len(a) < 300 else "<긴 인자 생략>" for a in args]]
         res["seconds"] = round(time.monotonic() - start, 3)
         res["stdout"] = self.anonymize(res["stdout"])
