@@ -12,9 +12,20 @@ setup 순서는 flow → 역할별 회사와 모델 → Claude 사용 시 환경
 
 정적 검증, doctor와 run 검증을 구분한다. unknown 키, 잘못된 타입, 중복 ID와 참조 오류를 거부한다. ID는 [a-z][a-z0-9_-]*를 사용하며 run_id는 시스템 생성 UUID다. 사용자 확인한 control 설정을 workspace 밖에 고정하고 hash를 기록한다. 미커밋 실행 설정을 사용하면 HEAD와의 차이를 표시하되 run 소스에 섞지 않는다.
 
+정적 검증은 `src/aicollab/config.py`의 `load_config()`와 `parse_config()`가 한다. 어긋난 항목을 모두 모아 `ConfigError`로 알리며, 항목마다 키 경로와 오류 코드를 가진다. 오류 코드는 unreadable, invalid-toml, missing-key, unknown-key, invalid-type, invalid-value, duplicate-id, unknown-reference, invalid-count, invalid-path, conflict다. 최소 CLI 버전 미달은 오류가 아니다. `version_checks()`가 설치 버전, 최소 버전, 상태(ok, below-minimum, minimum-unknown, installed-unknown)를 경고 정보로 돌려준다.
+
+시점이 doctor나 run인 규칙(실행 파일, Git root, WSL 배포판, 절대 경로 확인 등)은 정적 검증에서 하지 않는다. effort는 모델별 허용 값이 정해지기 전이라 문자열인지만 본다. 표에 값이 적히지 않아 구현에서 정한 규칙은 다음과 같다.
+
+- agents가 참조하는 회사마다 providers.<id> table이 있어야 한다.
+- prepare.dependency_paths는 키가 필수이고 빈 배열을 허용한다.
+- roles.<id>.access는 역할 기본 정책과 같은 값만 허용한다.
+- checks.commands[].trial은 source가 custom이면 doctor-once, candidate이면 not-required만 허용한다. doctor가 기록하는 pending, passed, failed는 설정에 쓸 수 없다.
+- 값만으로 판정되는 시간 관계를 정적으로 검사한다. pipeline.invocation_timeout_seconds는 run_timeout_seconds 이하이고, checks.commands[].timeout_seconds도 run_timeout_seconds 이하다.
+- 경로 키는 저장소 안의 상대 경로만 허용한다. 상위 경로, drive, UNC와 device 경로, Windows 예약 이름, 대소문자만 다른 중복을 거부한다.
+
 ## provider registry와 최소 버전
 
-Python의 provider_registry 모듈 한 곳에 회사별 모델과 근거 및 확인일을 둔다. UI와 프리셋 및 validator는 이 목록을 참조한다. 파일 이름 provider_registry.py는 설계 제안이다. 전체 모델 ID만 저장하고 별칭과 placeholder를 거부한다.
+Python의 provider_registry 모듈 한 곳에 회사별 모델과 근거 및 확인일을 둔다. UI와 프리셋 및 validator는 이 목록을 참조한다. 구현은 `src/aicollab/provider_registry.py`이고, `tests/test_provider_registry.py`가 아래 JSON과 표가 같은지 비교한다. 전체 모델 ID만 저장하고 별칭과 placeholder를 거부한다.
 
 ```json
 {
