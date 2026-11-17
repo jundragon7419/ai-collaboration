@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+
+# 도구 캐시
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# 로그
+*.log
+
+# 환경 변수
+.env
+.env.*
+!.env.example
+
+# aicollab 실행 기록. 이 저장소에서 도구를 돌려 볼 때 생긴다.
+.aicollab/runs/
+
+# 실제 CLI 호출 결과를 임시로 모아 두는 곳. 익명화한 것만 tests/fixtures/ 에 옮긴다.
+local-data/
+
+# 에디터, OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# AI 도구 개인 설정
+/CLAUDE.md
+/.claude/settings.local.json
+/.codex/
+/.agents/skills/
