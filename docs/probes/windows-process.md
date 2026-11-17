@@ -22,6 +22,7 @@
 
 - W1: 시험이 중간에 실패해도 자식과 손자를 정리하도록 `finally`에서 `taskkill /T /F`와 손자 종료를 한다. Job Object API 호출이 실패하면 그 사실을 기록하고 정리한다. 이번 실행에서는 API 호출이 모두 성공했다.
 - W3: `wrapper.cmd`에 Python과 dumper 경로를 직접 쓰지 않고 환경 변수(`PROBE_PY`, `PROBE_DUMPER`)로 넘겨 파일을 ASCII로만 쓴다. 이전 스크립트는 경로를 ANSI(cp949)로 썼고 콘솔은 65001이었다. 이번 실행의 두 경로에는 ASCII 밖 문자가 없어 같은 내용이 기록됐다.
+- W3: 공백 없는 wrapper 경로 대조군(B)을 `%TEMP%` 아래에 만들던 것을, `%TEMP%`에 공백이 있으면 공백 없는 다른 쓰기 가능 폴더에 만들도록 바꿨다. 그런 폴더가 없으면 B를 건너뛰고 이유를 기록한다. 이번 실행의 `%TEMP%`(`<HOME>\AppData\Local\Temp`)에는 공백이 없어 B가 대조군으로 성립했다.
 
 관찰 원본은 [fixtures/windows-process/windows-11-python-3.13.15.json](fixtures/windows-process/windows-11-python-3.13.15.json)에 있다. 홈 경로는 `<HOME>`, 사용자 이름은 `<USER>`로 바꿨다.
 
