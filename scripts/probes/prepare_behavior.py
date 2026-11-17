@@ -32,6 +32,15 @@ LOCK_FILES = ("uv.lock", "package-lock.json")
 TAIL = 4000
 
 
+def _as_text(value: object) -> str:
+    """TimeoutExpired의 stdout과 stderr는 text=True여도 bytes일 수 있다. 문자열로 맞춘다."""
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 class Recorder:
     def __init__(self, tmp: Path) -> None:
         self.tmp = tmp
@@ -63,7 +72,7 @@ class Recorder:
             )
             res: dict[str, Any] = {"exit_code": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "timed_out": False}
         except subprocess.TimeoutExpired as exc:
-            res = {"exit_code": None, "stdout": str(exc.stdout or ""), "stderr": str(exc.stderr or ""), "timed_out": True}
+            res = {"exit_code": None, "stdout": _as_text(exc.stdout), "stderr": _as_text(exc.stderr), "timed_out": True}
         except FileNotFoundError as exc:
             res = {"exit_code": None, "stdout": "", "stderr": str(exc), "timed_out": False, "not_found": True}
         res["argv"] = [self.anonymize(Path(argv[0]).name if i == 0 else a) for i, a in enumerate(argv)]
@@ -84,8 +93,53 @@ def tool(name: str) -> str:
     return found
 
 
+class SetupError(RuntimeError):
+    """실험 준비 명령이 실패했다. 이 뒤의 관찰은 기록하지 않는다."""
+
+
+def require(step: dict[str, Any], label: str) -> dict[str, Any]:
+    if step.get("exit_code") != 0:
+        stderr = (step.get("stderr") or "").strip()[-300:]
+        raise SetupError(f"{label} 실패: exit={step.get('exit_code')} stderr={stderr}")
+    return step
+
+
+# 측정하는 명령의 대상 환경이나 동작을 바꾸는 상속 변수. 값은 기록하지 않고 이름만 남긴다.
+# UV_PROJECT_ENVIRONMENT가 절대 경로면 uv sync가 worktree의 .venv 대신 그 환경을 고치고,
+# 선언되지 않은 패키지를 지운다. npm_config_global, prefix, location은 설치 위치를 바꾼다.
+UV_OVERRIDES = (
+    "UV_PROJECT_ENVIRONMENT", "UV_PROJECT", "UV_WORKING_DIRECTORY", "UV_FROZEN", "UV_LOCKED",
+    "UV_OFFLINE", "UV_NO_SYNC", "VIRTUAL_ENV",
+)
+NPM_OVERRIDES = (
+    "npm_config_global", "npm_config_location", "npm_config_prefix", "npm_config_ignore_scripts",
+    "npm_config_dry_run", "npm_config_package_lock", "npm_config_package_lock_only", "npm_config_omit",
+    "npm_config_production", "npm_config_offline", "npm_config_install_strategy", "npm_config_workspace",
+    "npm_config_workspaces",
+)
+
+
+def strip_vars(env: dict[str, str], names: tuple[str, ...]) -> list[str]:
+    lowered = {n.lower() for n in names}
+    removed = sorted(k for k in env if k.lower() in lowered)
+    for k in removed:
+        del env[k]
+    return removed
+
+
+def inherited_tool_env() -> dict[str, list[str]]:
+    """호출한 쪽에서 넘어온 GIT_*, UV_*, npm_config_* 이름. 값은 기록하지 않는다."""
+    names = list(os.environ)
+    return {
+        "git": sorted(k for k in names if k.upper().startswith("GIT_")),
+        "uv": sorted(k for k in names if k.upper().startswith("UV_") or k.upper() == "VIRTUAL_ENV"),
+        "npm": sorted(k for k in names if k.lower().startswith("npm_config_")),
+    }
+
+
 def git_env(tmp: Path) -> dict[str, str]:
-    env = dict(os.environ)
+    # GIT_CONFIG_COUNT, GIT_CONFIG_PARAMETERS 같은 명령 범위 설정은 전역 설정 파일을 바꿔도 적용된다.
+    env = {k: v for k, v in os.environ.items() if not k.upper().startswith("GIT_")}
     cfg = tmp / "isolated-global.gitconfig"
     if not cfg.exists():
         cfg.write_text(
@@ -152,20 +206,23 @@ class Repo:
 
     def init(self) -> None:
         self.path.mkdir(parents=True)
-        self.git("init", "-q", "-b", "main", str(self.path))
+        require(self.git("init", "-q", "-b", "main", str(self.path)), "git init")
         write(self.path / ".gitignore", ".venv/\nnode_modules/\n__pycache__/\n")
         write(self.path / "src.txt", "source\n")
 
     def commit(self, msg: str) -> str:
-        self.git("add", "-A")
-        self.git("commit", "-q", "--allow-empty", "-m", msg)
-        return self.git("rev-parse", "HEAD")["stdout"].strip()
+        require(self.git("add", "-A"), f"git add ({msg})")
+        require(self.git("commit", "-q", "--allow-empty", "-m", msg), f"git commit ({msg})")
+        return require(self.git("rev-parse", "HEAD"), "git rev-parse")["stdout"].strip()
 
     def worktree(self, rev: str) -> Path:
         self.count += 1
         wt = self.path.parent / f"wt{self.count}"
-        self.git("worktree", "add", "-q", "--detach", str(wt), rev)
+        require(self.git("worktree", "add", "-q", "--detach", str(wt), rev), "git worktree add")
         return wt
+
+    def tracked(self, rev: str, path: str) -> bool:
+        return self.git("cat-file", "-e", f"{rev}:{path}")["exit_code"] == 0
 
 
 def measure(rec: Recorder, wt: Path, argv: list[str], env: dict[str, str], dep_dir: str, before_hook: Any = None) -> dict[str, Any]:
@@ -205,19 +262,26 @@ def probe_uv(rec: Recorder, tmp: Path) -> None:
     uv = tool("uv")
     genv = git_env(tmp)
     env = dict(genv)
+    removed = strip_vars(env, UV_OVERRIDES)
+    # 상대 경로는 프로젝트 루트 기준이다. 각 worktree의 .venv로 고정한다.
+    env["UV_PROJECT_ENVIRONMENT"] = ".venv"
     env.setdefault("UV_NO_PROGRESS", "1")
     repo = Repo(rec, tmp / "uv" / "repo", genv)
     repo.init()
     write(repo.path / "pyproject.toml", PYPROJECT.format(deps='"six==1.16.0"'))
     no_lock = repo.commit("no lock")
-    lock_res = rec.run([uv, "lock"], repo.path, env)
+    lock_res = require(rec.run([uv, "lock"], repo.path, env), "uv lock")
     with_lock = repo.commit("with lock")
+    if not repo.tracked(with_lock, "uv.lock") or repo.tracked(no_lock, "uv.lock"):
+        raise SetupError("uv.lock이 'with lock' commit에만 있어야 함")
 
-    obs: dict[str, Any] = {"uv_lock_create_exit": lock_res["exit_code"]}
+    obs: dict[str, Any] = {"uv_lock_create_exit": lock_res["exit_code"], "inherited_vars_removed": removed}
 
     wt = repo.worktree(with_lock)
     obs["U1_sync_with_lock"] = measure(rec, wt, [uv, "sync"], env, ".venv")
     obs["U1_sync_with_lock"]["six_installed"] = venv_has(wt, "six")
+    if obs["U1_sync_with_lock"]["exit_code"] == 0 and not obs["U1_sync_with_lock"]["six_installed"]:
+        raise SetupError("uv sync가 성공했는데 worktree의 .venv에 설치되지 않음. 다른 환경을 썼을 수 있음")
     obs["U1b_sync_again"] = measure(rec, wt, [uv, "sync"], env, ".venv")
 
     wt = repo.worktree(no_lock)
@@ -228,6 +292,8 @@ def probe_uv(rec: Recorder, tmp: Path) -> None:
     # manifest와 lock 불일치: lock은 그대로 두고 의존성을 추가한 commit
     write(repo.path / "pyproject.toml", PYPROJECT.format(deps='"six==1.16.0", "idna==3.7"'))
     mismatch = repo.commit("manifest changed without relock")
+    if not repo.tracked(mismatch, "uv.lock"):
+        raise SetupError("불일치 시험 commit에 uv.lock이 없음")
     wt = repo.worktree(mismatch)
     obs["U3_sync_mismatch"] = measure(rec, wt, [uv, "sync"], env, ".venv")
     wt = repo.worktree(mismatch)
@@ -241,12 +307,17 @@ def probe_uv(rec: Recorder, tmp: Path) -> None:
     write(broken / "setup.py", 'raise SystemExit("probe: intentional build failure")\n')
     write(repo.path / "pyproject.toml", PYPROJECT.format(deps=f'"six==1.16.0", "broken-pkg @ {broken.as_uri()}"'))
     lock_broken = rec.run([uv, "lock"], repo.path, env)
-    failing = repo.commit("broken dependency")
     obs["U4_lock_with_broken_exit"] = lock_broken["exit_code"]
     obs["U4_lock_with_broken_stderr"] = lock_broken["stderr"]
-    wt = repo.worktree(failing)
-    obs["U4_sync_build_failure"] = measure(rec, wt, [uv, "sync"], env, ".venv")
-    obs["U4_sync_build_failure"]["six_installed_after_failure"] = venv_has(wt, "six")
+    if lock_broken["exit_code"] != 0:
+        # lock이 안 만들어지면 build 단계 실패를 시험할 수 없다. 이름과 다른 관찰을 남기지 않는다.
+        obs["U4_sync_build_failure"] = {"skipped": "broken-pkg를 포함한 uv lock 실패"}
+        require(repo.git("checkout", "-q", "--", "."), "git checkout")
+    else:
+        failing = repo.commit("broken dependency")
+        wt = repo.worktree(failing)
+        obs["U4_sync_build_failure"] = measure(rec, wt, [uv, "sync"], env, ".venv")
+        obs["U4_sync_build_failure"]["six_installed_after_failure"] = venv_has(wt, "six")
 
     # 존재하지 않는 패키지
     write(repo.path / "pyproject.toml", PYPROJECT.format(deps='"aicollab-probe-nonexistent-package-zz==9.9.9"'))
@@ -265,6 +336,7 @@ def probe_npm(rec: Recorder, tmp: Path) -> None:
     npm = tool("npm")
     genv = git_env(tmp)
     env = dict(genv)
+    removed = strip_vars(env, NPM_OVERRIDES)
     env["npm_config_fund"] = "false"
     env["npm_config_audit"] = "false"
     env["npm_config_update_notifier"] = "false"
@@ -279,9 +351,11 @@ def probe_npm(rec: Recorder, tmp: Path) -> None:
 
     package({"is-number": "7.0.0"})
     no_lock = repo.commit("no lock")
-    lock_res = rec.run([npm, "install", "--package-lock-only"], repo.path, env)
+    lock_res = require(rec.run([npm, "install", "--package-lock-only"], repo.path, env), "npm install --package-lock-only")
     with_lock = repo.commit("with lock")
-    obs: dict[str, Any] = {"package_lock_only_exit": lock_res["exit_code"]}
+    if not repo.tracked(with_lock, "package-lock.json") or repo.tracked(no_lock, "package-lock.json"):
+        raise SetupError("package-lock.json이 'with lock' commit에만 있어야 함")
+    obs: dict[str, Any] = {"package_lock_only_exit": lock_res["exit_code"], "inherited_vars_removed": removed}
 
     wt = repo.worktree(with_lock)
     obs["N1_ci_with_lock"] = measure(rec, wt, [npm, "ci"], env, "node_modules")
@@ -298,6 +372,8 @@ def probe_npm(rec: Recorder, tmp: Path) -> None:
 
     package({"is-number": "7.0.0", "is-odd": "3.0.1"})
     mismatch = repo.commit("manifest changed without relock")
+    if not repo.tracked(mismatch, "package-lock.json"):
+        raise SetupError("불일치 시험 commit에 package-lock.json이 없음")
     wt = repo.worktree(mismatch)
     obs["N3_ci_mismatch"] = measure(rec, wt, [npm, "ci"], env, "node_modules")
 
@@ -310,7 +386,7 @@ def probe_npm(rec: Recorder, tmp: Path) -> None:
             "prepare": npm_script("require('fs').appendFileSync('src.txt','prepare\\n')"),
         },
     )
-    rec.run([npm, "install", "--package-lock-only", "--ignore-scripts"], repo.path, env)
+    require(rec.run([npm, "install", "--package-lock-only", "--ignore-scripts"], repo.path, env), "npm lock (lifecycle)")
     scripts_rev = repo.commit("lifecycle scripts")
     wt = repo.worktree(scripts_rev)
     obs["N4_ci_lifecycle_scripts"] = measure(rec, wt, [npm, "ci"], env, "node_modules")
@@ -318,7 +394,7 @@ def probe_npm(rec: Recorder, tmp: Path) -> None:
 
     # 설치 뒤 실패: postinstall이 실패
     package({"is-number": "7.0.0"}, {"postinstall": npm_script("process.exit(7)")})
-    rec.run([npm, "install", "--package-lock-only", "--ignore-scripts"], repo.path, env)
+    require(rec.run([npm, "install", "--package-lock-only", "--ignore-scripts"], repo.path, env), "npm lock (postinstall)")
     fail_rev = repo.commit("failing postinstall")
     wt = repo.worktree(fail_rev)
     obs["N5_ci_postinstall_failure"] = measure(rec, wt, [npm, "ci"], env, "node_modules")
@@ -326,13 +402,14 @@ def probe_npm(rec: Recorder, tmp: Path) -> None:
 
     # 존재하지 않는 패키지 버전이 lock에 있는 경우: lock을 직접 고친다.
     package({"is-number": "7.0.0"})
-    rec.run([npm, "install", "--package-lock-only"], repo.path, env)
+    require(rec.run([npm, "install", "--package-lock-only"], repo.path, env), "npm lock (download)")
     lock_path = repo.path / "package-lock.json"
     lock = json.loads(lock_path.read_text(encoding="utf-8"))
     entry = lock.get("packages", {}).get("node_modules/is-number")
-    if entry:
-        entry["resolved"] = "https://registry.npmjs.org/is-number/-/is-number-99.99.99.tgz"
-        entry.pop("integrity", None)
+    if not entry:
+        raise SetupError("package-lock.json에 node_modules/is-number 항목이 없음")
+    entry["resolved"] = "https://registry.npmjs.org/is-number/-/is-number-99.99.99.tgz"
+    entry.pop("integrity", None)
     write(lock_path, json.dumps(lock, indent=2) + "\n")
     bad_rev = repo.commit("bad resolved url")
     wt = repo.worktree(bad_rev)
@@ -371,6 +448,7 @@ def main() -> int:
         "uv": version(["uv", "--version"]),
         "node": version(["node", "--version"]),
         "npm": version(["npm", "--version"]),
+        "inherited_env_names": inherited_tool_env(),
     }
     errors = {}
     probes = {"uv": probe_uv, "npm": probe_npm}
@@ -388,6 +466,7 @@ def main() -> int:
     print(f"결과: {out_dir / 'results.json'}")
     if errors:
         print(f"스크립트 오류: {errors}", file=sys.stderr)
+        return 1
     return 0
 
 

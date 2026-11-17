@@ -16,7 +16,15 @@
 | 네트워크 | PyPI와 npm registry 접근 가능 |
 | 실행 명령 | `python3 scripts/probes/prepare_behavior.py --out <출력 폴더>` |
 
-실험 저장소는 임시 디렉터리에 새로 만들었고, 경우마다 `git worktree add --detach`로 새 worktree를 만들어 명령을 한 번씩 실행했다. source와 lock 비교는 `.git`, `.venv`, `node_modules`, `__pycache__`를 뺀 파일의 sha256 전후 비교다. 의존성 산출물은 폴더 존재와 파일 수만 기록했다.
+실험 저장소는 임시 디렉터리에 새로 만들었고, 경우마다 `git worktree add --detach`로 새 worktree를 만들어 명령을 한 번씩 실행했다. 준비 단계(`git` commit, `uv lock`, `npm install --package-lock-only`)가 실패하거나 lock이 기대한 commit에 없으면 스크립트는 그 도구의 관찰을 남기지 않고 exit 1로 끝난다.
+
+호출한 쪽의 환경 변수가 측정 대상을 바꾸지 않도록 다음을 정리했다. 정리한 변수는 이름만 `results.json`의 `inherited_env_names`, `inherited_vars_removed`에 남긴다.
+
+- Git: `GIT_`로 시작하는 변수를 모두 빼고 `GIT_CONFIG_GLOBAL`(임시 파일), `GIT_CONFIG_NOSYSTEM=1`만 넣었다. `GIT_CONFIG_COUNT`, `GIT_CONFIG_PARAMETERS` 같은 명령 범위 설정은 전역 설정 파일을 바꿔도 적용되기 때문이다.
+- uv: `UV_PROJECT_ENVIRONMENT`, `UV_PROJECT`, `UV_WORKING_DIRECTORY`, `UV_FROZEN`, `UV_LOCKED`, `UV_OFFLINE`, `UV_NO_SYNC`, `VIRTUAL_ENV`을 빼고 `UV_PROJECT_ENVIRONMENT=.venv`로 고정했다. 절대 경로 `UV_PROJECT_ENVIRONMENT`가 남아 있으면 `uv sync`가 worktree 밖 환경을 고치고 선언되지 않은 패키지를 지운다. 정리 전 스크립트로 재현했을 때 외부 환경의 `idna`가 지워지고 `six`가 설치됐다. 사용자 `uv.toml`은 index 설정이 필요할 수 있어 그대로 두었다.
+- npm: `npm_config_global`, `npm_config_location`, `npm_config_prefix`, `npm_config_ignore_scripts` 등 설치 위치와 script 실행을 바꾸는 변수를 뺐다.
+
+이번 실행 환경에는 `GIT_CONFIG_COUNT`와 `GIT_CONFIG_KEY_*`가 있었다. 정리 전 스크립트로 한 첫 실행과 정리 뒤 실행의 exit code, source와 lock 변화, 의존성 폴더 상태는 16개 경우 모두 같았다. source와 lock 비교는 `.git`, `.venv`, `node_modules`, `__pycache__`를 뺀 파일의 sha256 전후 비교다. 의존성 산출물은 폴더 존재와 파일 수만 기록했다.
 
 Windows에서는 실행하지 않았다. 기존 기록의 Windows 환경은 Node v24.14.0, npm 11.9.0([02-config-spec Windows 실행과 wrapper](../02-config-spec.md#windows-실행과-wrapper))으로 이번 환경과 버전이 다르다. npm lifecycle script가 Windows에서 `cmd.exe`로 실행되는 점, `.venv\Scripts` 배치, 경로 길이 제한은 미확인이다. 같은 스크립트를 Windows에서 실행하면 같은 형식의 `results.json`이 나온다.
 
