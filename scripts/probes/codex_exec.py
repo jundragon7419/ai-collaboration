@@ -35,6 +35,14 @@ TIMEOUT = 300
 UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
 
 
+def base_env() -> dict[str, str]:
+    """CLI에 넘길 환경. 상속 GIT_*(GIT_DIR, GIT_WORK_TREE, GIT_CONFIG_COUNT 등)를 뺀다.
+
+    CLI가 실험 폴더에서 git을 실행할 때 호출한 쪽 저장소나 외부 Git 설정을 건드리지 않게 한다.
+    """
+    return {k: v for k, v in os.environ.items() if not k.upper().startswith("GIT_")}
+
+
 class Recorder:
     def __init__(self, tmp: Path, codex: str) -> None:
         self.tmp = tmp
@@ -55,7 +63,7 @@ class Recorder:
         start = time.monotonic()
         try:
             proc = subprocess.run(
-                [self.codex, *args], cwd=cwd, env=env, input=prompt, capture_output=True, timeout=TIMEOUT,
+                [self.codex, *args], cwd=cwd, env=env if env is not None else base_env(), input=prompt, capture_output=True, timeout=TIMEOUT,
                 text=True, encoding="utf-8", errors="replace",
             )
             res: dict[str, Any] = {"exit_code": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "timed_out": False}
@@ -328,7 +336,7 @@ def main() -> int:
                             "note": "같은 시간에 다른 codex 세션을 쓰면 개수가 섞인다"}
 
     if "errors" in only:
-        env = {k: v for k, v in os.environ.items() if k not in AUTH_ENV}
+        env = {k: v for k, v in base_env().items() if k not in AUTH_ENV}
         empty = tmp / "empty-codex-home"
         empty.mkdir()
         env["CODEX_HOME"] = str(empty)
