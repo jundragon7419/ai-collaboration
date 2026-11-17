@@ -391,12 +391,17 @@ def probe_encoding(tmp: Path) -> dict[str, Any]:
     if git:
         repo = tmp / "enc-repo"
         repo.mkdir()
-        genv = dict(os.environ, GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=str(tmp / "g.cfg"))
+        # 상속 GIT_* (GIT_DIR, GIT_CONFIG_COUNT 등)가 남으면 다른 저장소를 건드리거나 외부 설정이 적용된다.
+        genv = {k: v for k, v in os.environ.items() if not k.upper().startswith("GIT_")}
+        genv.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=str(tmp / "g.cfg"))
         (tmp / "g.cfg").write_text("[user]\n\tname = Probe\n\temail = p@example.invalid\n", encoding="utf-8")
-        run([git, "init", "-q", str(repo)], env=genv)
+        for argv, cwd in (([git, "init", "-q", str(repo)], tmp), ):
+            if run(argv, cwd=cwd, env=genv)["exit_code"] != 0:
+                raise RuntimeError("git init 실패")
         (repo / "한글.txt").write_text("x", encoding="utf-8")
-        run([git, "add", "-A"], cwd=repo, env=genv)
-        run([git, "commit", "-q", "-m", "한글 커밋 메시지"], cwd=repo, env=genv)
+        for argv in ([git, "add", "-A"], [git, "commit", "-q", "-m", "한글 커밋 메시지"]):
+            if run(argv, cwd=repo, env=genv)["exit_code"] != 0:
+                raise RuntimeError(f"{argv[1]} 실패")
         for name, argv in {
             "git_log_message": [git, "log", "-1", "--format=%s"],
             "git_status_quotepath_default": [git, "status", "--porcelain", "--untracked-files=all"],
@@ -453,6 +458,7 @@ def main() -> int:
     print(f"결과: {out_dir / 'results.json'}")
     if errors:
         print(f"스크립트 오류: {errors}", file=sys.stderr)
+        return 1
     return 0
 
 
