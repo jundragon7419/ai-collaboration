@@ -67,7 +67,7 @@ control 설정 확인과 doctor → 원본 변경 경고, base HEAD OID 고정
 
 prepare는 모델보다 먼저 실행한다. 등록 명령에 포함된 install script와 자식 프로세스도 실제 준비 작업이다. 명령은 직렬로 실행하고 첫 실패, timeout과 취소에서 prepare-failed로 멈춘다. 부분 환경과 로그는 보존하고 planner와 coder를 시작하지 않는다. uv sync를 다른 명령으로 바꾸거나 npm ci 실패를 npm install로 자동 대체하지 않는다.
 
-prepare 전후 source와 lock을 비교한다. .venv와 node_modules 등 등록한 의존성 산출물은 별도 환경 manifest로 기록하고 모델의 코드 diff와 commit 대상에서 제외한다. source와 lock 변경을 준비 baseline에 묻지 않는다. D12에 따라 기존 lock을 유지한다. lock이 없거나 manifest와 맞지 않으면 중단한다. doctor는 lock 부재를 미리 알리고 사용자가 run 밖에서 uv lock이나 npm install 등으로 한 번 생성하도록 안내한다. run 안의 lock 변경은 중단한다.
+prepare 전후 source와 lock을 비교한다. .venv와 node_modules 등 등록한 의존성 산출물은 별도 환경 manifest로 기록하고 모델의 코드 diff와 commit 대상에서 제외한다. source와 lock 변경을 준비 baseline에 묻지 않는다. D12에 따라 기존 lock을 유지한다. lock이 없거나 manifest와 맞지 않으면 중단한다. doctor는 lock 부재를 미리 알리고 사용자가 run 밖에서 uv lock이나 npm install 등으로 한 번 생성하도록 안내한다. run 안의 lock 변경은 중단한다. M0에서 `uv sync`는 lock 부재와 불일치에서 lock을 만들거나 고친 뒤 성공(exit 0)했으므로, 이 중단은 명령의 exit code가 아니라 lock 전후 비교로 건다. `uv sync --frozen`처럼 불일치를 숨기는 등록의 탐지는 [D16](05-open-decisions.md#d16-lock-불일치-탐지-방법)에서 정한다.
 
 prepare의 네트워크 허용은 프로젝트 의존성 준비용이다. check와 그 자식 프로세스는 network=blocked이며 missing dependency를 설치하지 않는다. 공식 AI 서비스 통신과 사람이 확인한 Git 공개 통신은 의존성 설치 네트워크와 구분한다. hooks는 평소대로 실행하되 준비되지 않은 도구나 외부 통신 요구로 실패하면 우회하지 않고 중단한다. 이 정책의 실제 적용은 단계 0 확인 대상이다.
 
@@ -97,11 +97,11 @@ tracked와 승인 새 파일은 내용 hash를 계산하고, 그 밖의 ignored 
 
 Git hooks는 평소처럼 실행한다. hooksPath를 바꾸거나 no-verify로 우회하지 않는다. worktree 생성 hooks와 prepare 뒤에도 고정 HEAD의 소스를 확인한다. 원본이나 run source의 예상 밖 변경이 있으면 보존하고 중단한다. [Git hooks](https://git-scm.com/docs/githooks).
 
-gate 이후 승인 파일의 Git 결과 tree가 base tree와 같으면 “변경 없음”으로 종료한다. commit과 push, Draft PR은 실행하지 않는다. ignored 의존성이 생겼다는 이유로 코드 변경이 있다고 판단하지 않고 모델의 자기 보고로 무변경을 확정하지 않는다. 실패와 미완료를 무변경 성공으로 바꾸지 않는다.
+gate 이후 승인 파일의 Git 결과 tree가 base tree와 같으면 “변경 없음”으로 종료한다. 이 판정은 승인 파일을 stage한 뒤 `git write-tree`를 base commit의 tree와 비교하는 방식으로 M0에서 확인했다. 변경이 없을 때 `git commit`은 exit 1이므로 판정 뒤 commit을 호출하지 않는다. commit과 push, Draft PR은 실행하지 않는다. ignored 의존성이 생겼다는 이유로 코드 변경이 있다고 판단하지 않고 모델의 자기 보고로 무변경을 확정하지 않는다. 실패와 미완료를 무변경 성공으로 바꾸지 않는다.
 
 변경이 있으면 사용자 Git identity로 commit한다. 사람 개입이 필요한 서명은 commit 시작 전에 중단하고 알린다. 서명을 끄거나 unsigned로 바꾸지 않는다. 임의 signing program의 개입 여부를 설정만으로 완전히 예측한다고 보장하지 않는다. 무인 준비를 확인하지 못했으면 시작하지 않고 예상 밖 prompt와 timeout도 실패 처리한다. [Git signing 설정](https://git-scm.com/docs/git-config#Documentation/git-config.txt-gpgprogram).
 
-raw source snapshot과 Git의 expected_tree_oid를 구분한다. 줄바꿈과 filters의 대응을 기록하고 commit 후 실제 tree와 source를 다시 확인한다. pre-commit이 stage 내용을 고치거나 post-commit이 소스를 바꾸면 기존 검사와 리뷰를 재사용하지 않는다. commit이 이미 생겼으면 committed-unverified와 실제 SHA를 기록하고 publish를 막는다. 자동 reset과 amend를 하지 않는다. 재개하려면 현재 diff의 검사와 리뷰가 필요하다.
+raw source snapshot과 Git의 expected_tree_oid를 구분한다. M0에서 pre-commit이 다시 stage한 변경은 `git write-tree`와 `HEAD^{tree}`의 차이로, stage 밖 변경과 post-commit 변경은 tree가 같아 `git status`로만 드러났다. 줄바꿈 정규화로 raw byte가 달라도 stage 뒤 tree는 같았다. 두 비교가 모두 필요하다([git-behavior G3](probes/git-behavior.md#g3-hook의-파일-변경과-tree-불일치-탐지), [G5](probes/git-behavior.md#g5-변경-없음-판정)). commit-msg hook은 commit 메시지를 바꿀 수 있다. 메시지 변경을 확인할지는 정하지 않았다. 줄바꿈과 filters의 대응을 기록하고 commit 후 실제 tree와 source를 다시 확인한다. pre-commit이 stage 내용을 고치거나 post-commit이 소스를 바꾸면 기존 검사와 리뷰를 재사용하지 않는다. commit이 이미 생겼으면 committed-unverified와 실제 SHA를 기록하고 publish를 막는다. 자동 reset과 amend를 하지 않는다. 재개하려면 현재 diff의 검사와 리뷰가 필요하다.
 
 ## 공개
 
@@ -115,7 +115,7 @@ local-committed, pushed, draft-created와 committed-unverified를 구분한다. 
 
 | 단계 | 작업과 완료 기준 |
 |---|---|
-| 0 | Python 실행 환경과 두 CLI의 최소 버전, 구조화 출력, native 및 WSL2 경로, prepare와 check 네트워크 구분, 프로세스 종료와 Git 동작을 확인. 미확인 기능을 성공으로 표시하지 않음 |
+| 0 | Python 실행 환경과 두 CLI의 최소 버전, 구조화 출력, native 및 WSL2 경로, prepare와 check 네트워크 구분, 프로세스 종료와 Git 동작을 확인. 미확인 기능을 성공으로 표시하지 않음. M0(#3부터 #7까지)에서 실행했고 결과는 [docs/probes/](probes/README.md)에 있다. WSL2, check 네트워크 차단, 한도 오류, 실제 서명과 gh는 남은 미확인이다 |
 | 1 | setup, 배정 명령, flow 2종과 prepare, tester 및 check, P gate와 무변경 종료, 평소 hooks 및 사용자 commit, 확인 후 publish 구현 |
 | 2 | 실행 이력과 비교 실험, custom probe와 준비 캐시의 사용성 개선, 필요한 역할 확장 |
 | 이후 별도 검토 | untrusted 저장소와 prompt injection 방어, OS 수준 경로별 사전 차단과 controller 격리. MVP 완료 조건에 포함하지 않음 |
@@ -127,9 +127,9 @@ local-committed, pushed, draft-created와 committed-unverified를 구분한다. 
 - workspace 생성 직후 등록 prepare를 실행한다. 성공 후 모델을 시작하며 실패와 부분 상태를 보존한다. 준비 산출물과 소스 및 로그 입력 경계가 동작한다.
 - trusted-local 권한 옵션과 도구 제한을 적용하고 범위 밖 source 및 test_paths 변경의 사후 탐지와 중단을 확인한다. 사전 차단 성공은 완료 필수가 아니다.
 - custom 검사를 별도 doctor workspace에서 1회 시험하고 검사 off 및 tester flow의 off 거부, 검사 단계 네트워크 차단과 수정 회차를 확인한다.
-- 모델별 최소 CLI 버전보다 낮으면 해당 agent의 probe를 failed-version-check로 처리하고 모델을 호출하지 않는다. 설치 Claude 2.1.316에서 Fable 최소 2.1.321 미달을 확인한다.
+- 모델별 최소 CLI 버전보다 낮으면 해당 agent의 probe를 failed-version-check로 처리하고 모델을 호출하지 않는다. 설치 Claude 2.1.316에서 Fable 최소 2.1.321 미달을 확인한다. M0에서 2.1.316의 Fable 호출이 성공해 이 항목은 [D14](05-open-decisions.md#d14-fable과-최소-cli-버전-규칙) 결정에 따라 바뀔 수 있다.
 - 평소 hooks를 실행하고, 사람 개입 서명은 commit 전에 중단한다. hook에 의한 tree 변경과 이미 생성된 미검증 commit의 publish를 차단한다.
 - gate 성공과 Git 결과 무변경이면 commit과 push 없이 “변경 없음”으로 종료한다. 변경 있으면 사용자 identity commit과 확인 후 공개를 수행한다.
-- timeout과 Ctrl+C 후 자식 프로세스 종료를 확인하고 그 전까지 lock을 유지한다. 실제 미확인과 보장 제외 범위를 CLI 결과에 표시한다.
+- timeout과 Ctrl+C 후 자식 프로세스 종료를 확인하고 그 전까지 lock을 유지한다. M0에서 Windows의 `Popen.kill()`과 표준 timeout은 손자 프로세스를 남겼으므로 트리 단위 종료가 필요하다. 실제 미확인과 보장 제외 범위를 CLI 결과에 표시한다.
 
-아직 구현 전이며 이번 문서 작업에서 prepare와 custom probe, 모델 호출과 Git commit 및 push는 실행하지 않았다. 다양성 효과와 tester 품질, P 등급 일관성은 고정 작업과 사람 판정으로 이후 측정한다.
+아직 구현 전이다. M0에서 확인 실험용 스크립트로 모델 호출(Claude 18회, Codex 20회), prepare 명령, 임시 저장소의 Git commit과 로컬 bare remote push를 실행했다. 제품 코드의 prepare와 custom probe, 실제 원격 push와 PR 생성은 실행하지 않았다. 다양성 효과와 tester 품질, P 등급 일관성은 고정 작업과 사람 판정으로 이후 측정한다.
