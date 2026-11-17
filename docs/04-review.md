@@ -1,6 +1,6 @@
 # 초안 적대적 검토 결과
 
-최종 갱신: 2026-11-17. 1차와 2차 검토일은 2026-11-16, 3차는 2026-11-17이다. 대상: `claude-docs/`의 원문 4개 전체. 원문은 수정하지 않는다. 3차 검토와 2026-11-17 사용자 결정까지 반영했다. 구현의 안전성과 품질을 검증한 결과가 아니라 기획의 모순과 실행 전제를 검토한 결과다.
+최종 갱신: 2026-11-17. 1차와 2차 검토일은 2026-11-16, 3차는 2026-11-17이다. 대상: `claude-docs/`의 원문 4개 전체. 원문은 수정하지 않는다. 3차 검토와 2026-11-17 사용자 결정, M0 확인 실험(#3부터 #7까지) 결과까지 반영했다. 구현의 안전성과 품질을 검증한 결과가 아니라 기획의 모순과 실행 전제를 검토한 결과다.
 
 문서 검토의 심각도는 높음, 중간, 낮음이며 제품 리뷰의 P0부터 P5까지와 구분한다. 높음은 권한이나 gate 우회, 사용자 변경 손실, 필수 요구 미충족으로 이어지는 항목이다. 중간은 구현 전 보완이 필요한 계약과 근거 부족이다. 낮음은 사용성과 단계 구분 문제다. 1차 위치는 당시 원문의 1부터 시작하는 줄 번호다. 2차 항목은 현재 문서의 절과 C1부터 C11까지의 원문 위치를 사용한다. 1차 항목의 반영과 상태는 이번 결정에 맞게 갱신했다.
 
@@ -80,6 +80,7 @@ Codex 도움말 호출에는 임시 디렉터리 정리와 PATH alias 생성의 
 - 근거: C03은 `-p`의 workspace trust 생략을 명시한다. [Claude hooks의 workspace trust](https://code.claude.com/docs/en/hooks#workspace-trust)는 비대화형 세션의 신뢰 처리를 설명한다. managed 설정은 일반 사용자 설정으로 모두 끌 수 없다.
 - 반영: trusted-local 보장 범위에서 설정과 확장 실행 경로를 기록한다. 악의적 hooks와 prompt injection 방어를 MVP 보장으로 표시하지 않는다.
 - 상태: 2026-11-17 결정 반영.
+- M0 결과: `claude -p`의 Bash 거부 사례에서 모델이 Drive, Docs 같은 MCP 도구를 언급했다. `--tools`와 별개로 사용자 MCP 서버가 노출됐을 수 있지만 출력에 도구 목록이 없어 미확인이다. `codex exec`는 모든 호출에서 사용자 홈의 `.agents\skills`를 읽었다. [claude-headless C2](probes/claude-headless.md#c2---tools로-쓰기-도구와-bash-제외), [codex-exec 공통 출력 형태](probes/codex-exec.md#공통-출력-형태)
 
 ### R06 Windows의 두 provider가 같은 sandbox를 제공한다는 전제
 
@@ -89,6 +90,7 @@ Codex 도움말 호출에는 임시 디렉터리 정리와 PATH alias 생성의 
 - 근거: [Claude sandbox 문서](https://code.claude.com/docs/en/sandboxing)는 native Windows shell에 Bash sandbox가 적용되지 않는다고 설명한다. [Codex Windows sandbox](https://learn.chatgpt.com/docs/windows/windows-sandbox)는 native 구현과 장치 및 정책 조건을 설명한다. 이 PC의 차단 동작은 시험하지 않았다.
 - 반영: 저장소별 runtime 규칙을 유지한다. native의 Bash sandbox 미적용은 알리되 untrusted의 사전 강제 조건을 MVP에서 뺐다.
 - 상태: 2026-11-17 결정 반영.
+- M0 결과: Codex 0.167.0-alpha.3.2의 native Windows sandbox에서 read-only는 작업 폴더 안과 밖 쓰기를, workspace-write는 밖 쓰기를 OS 접근 거부로 막았다. `-a never`에서 승인 대기는 없었다. read-only에서는 명령 작업 폴더가 `-C`와 달랐고 처음 명령이 `CreateProcessWithLogonW failed: 267`로 실패했다. [codex-exec X2](probes/codex-exec.md#x2-sandbox-read-only와-workspace-write--a-never)
 
 ### R07 사후 git status와 자동 복원이 사용자 변경을 잃게 할 수 있음
 
@@ -151,6 +153,7 @@ Codex 도움말 호출에는 임시 디렉터리 정리와 PATH alias 생성의 
 - 문제: Claude의 JSON envelope, `structured_output`, Codex의 JSONL 이벤트와 최종 JSON은 같은 형식이 아니다. exit 0이나 JSON 일부만으로 정상 결과라 판단하면 거절과 부분 출력을 통과시킬 수 있다.
 - 근거: C03과 C07. [Claude 구조화 출력](https://code.claude.com/docs/en/headless#get-structured-output), [Codex 비대화형 출력](https://learn.chatgpt.com/docs/non-interactive-mode).
 - 반영: provider별 parser와 공통 검증을 분리했다. 종료 상태, 완전한 결과, Schema와 의미 검증을 모두 요구한다. 옛 댓글 꼬리를 제거하는 parser를 재사용하지 않는다.
+- M0 결과: Claude는 `structured_output`, Codex는 `-o` 파일과 `turn.completed`로 결과를 받았다. Claude는 오류에서도 `subtype`이 `success`여서 exit code와 `is_error`, `terminal_reason`으로 판정해야 한다. Codex 실패는 exit 1과 `turn.failed`다. [claude-headless 공통 출력 형태](probes/claude-headless.md#공통-출력-형태), [codex-exec 공통 출력 형태](probes/codex-exec.md#공통-출력-형태)
 
 ### R14 공통 Schema 제한과 지원 모델 범위를 단정할 수 없음
 
@@ -159,6 +162,7 @@ Codex 도움말 호출에는 임시 디렉터리 정리와 PATH alias 생성의 
 - 문제: `additionalProperties: false`만으로 두 CLI와 모든 모델의 호환성이 확보되지 않는다. 모든 property의 required 처리도 필요하고, “일부 모델만 지원한다는 자료”는 출처가 없다.
 - 근거: [OpenAI Structured Outputs 제한](https://developers.openai.com/api/docs/guides/structured-outputs). C07은 옵션 존재만 확인한다. CLI 모델별 수락 목록은 이번 확인 범위에서 미확인이다.
 - 반영: 단순한 고정 root Schema와 전부 required인 객체로 초안을 작성했다. 역할별 의미 검사는 로컬에서 수행하고 선택 모델별 probe를 요구한다. 실제 공통 지원이 검증됐다고 표시하지 않는다.
+- M0 결과: 공통 role-result Schema를 Claude haiku의 `--json-schema`와 Codex `gpt-6-astra`의 `--output-schema`가 모두 수락했고 결과가 로컬 부분집합 검사를 통과했다. Codex는 required에 없는 property가 있으면 `invalid_json_schema`(400)로 거부했다. 다른 모델과 `pattern`, `format`의 강제 여부는 미확인이다. [claude-headless C3](probes/claude-headless.md#c3---json-schema-출력과-schema-수락), [codex-exec X3](probes/codex-exec.md#x3---output-schema-엄격-규칙과--o)
 
 ### R15 자동 fallback이 한도와 부분 변경 문제를 해결한다는 가정
 
@@ -184,6 +188,7 @@ Codex 도움말 호출에는 임시 디렉터리 정리와 PATH alias 생성의 
 - 근거: C03은 `fable`, `opus`, `sonnet` 별칭과 `--effort`를 명시한다. [Claude 모델 설정](https://code.claude.com/docs/en/model-config)은 버전 요건과 정책 제한을 설명한다. [Codex effort 설정](https://learn.chatgpt.com/docs/config-file/config-reference)의 지원 값은 모델과 client 의존적이다.
 - 반영: 사용자 결정의 전체 모델 ID와 registry를 적용했다. 별칭 저장을 거부하고 Fable의 설치 버전 부족을 별도 표시한다. 계정 접근과 실효 effort는 미확인이다.
 - 상태: 2차 결정과 검토 반영.
+- M0 결과: Claude `--effort`는 `low`부터 `max`까지 받았고 알 수 없는 값은 경고 뒤 기본값으로 진행했다(exit 0). Codex는 API가 값을 검사해 `gpt-6-astra`의 `minimal`과 알 수 없는 값을 400으로 거부했다. 두 CLI 모두 실효 effort를 출력하지 않는다. [claude-headless C5](probes/claude-headless.md#c5---effort-값), [codex-exec X5](probes/codex-exec.md#x5-effort-값-이름)
 
 ### R18 비용과 turn 상한을 공통 실행 상한으로 사용할 수 없음
 
@@ -269,6 +274,7 @@ Codex 도움말 호출에는 임시 디렉터리 정리와 PATH alias 생성의 
 - 문제: 부모 CLI만 죽으면 shell과 검사 프로세스가 남아 timeout 이후 파일을 바꿀 수 있다. 시작한 프로세스 트리의 종료 확인 계약이 없다.
 - 근거: [Windows Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)는 프로세스 집합 관리와 제한을 설명하며 예외도 있다. 이 프로젝트의 실제 구현과 종료 시험은 없다.
 - 반영: 프로세스 트리 종료 확인 전 lock을 풀지 않도록 명시했다. 구체 구현은 언어와 runtime 선택 뒤 검증한다. Job Object 자체를 보안 sandbox로 표현하지 않는다.
+- M0 결과: Windows에서 `Popen.kill()`과 `subprocess.run(timeout=)`은 손자 프로세스를 남겼다. `taskkill /T /F`, Job Object(`KILL_ON_JOB_CLOSE`), `CREATE_NEW_PROCESS_GROUP`과 `CTRL_BREAK_EVENT`는 손자까지 끝냈다. 구현 방식은 아직 정하지 않았다. [windows-process W1](probes/windows-process.md#w1-시간-상한-뒤-자식-프로세스까지-종료)
 
 ### R28 설정 타입과 경로 및 shell 경계가 미정
 
@@ -458,6 +464,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 심각도: 높음.
 - 반영: 평소 hooks를 실행하고 사람 개입 서명은 commit 전에 중단한다. 이미 생성된 commit의 tree 불일치는 committed-unverified로 보존하고 publish를 막는다.
 - 상태: 2026-11-17 결정 반영.
+- M0 결과: worktree 안 commit에서 원본 `.git/hooks`가 실행되고 `--no-verify`에서도 `post-commit`은 실행됐다. 상속 `GIT_CONFIG_COUNT`, `GIT_CONFIG_PARAMETERS` 같은 명령 범위 설정은 전역 설정 파일을 바꿔도 적용돼, 오케스트레이터가 실행하는 git의 환경 변수도 정리 대상이다. [git-behavior G2](probes/git-behavior.md#g2-worktree-안-커밋에서-hooks-실행)
 
 ### R48 브랜치 충돌과 push 시점의 공개 노출
 
@@ -466,6 +473,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 근거: [Git worktree](https://git-scm.com/docs/git-worktree), [Git push](https://git-scm.com/docs/git-push), [GitHub 공개 범위](https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories#about-repository-visibility).
 - 심각도: 높음.
 - 반영: 새 run_id와 branch를 만들고 충돌 시 덮어쓰지 않는다. 최초 push는 원격 ref 부재를 조건으로 하는 생성 전용 lease를 사용하며 기존 ref 강제 갱신은 금지한다. 대상과 공개 범위, identity와 SHA를 보여 주고 확인한다.
+- M0 결과: 같은 이름 branch의 `git worktree add -b`는 exit 255로 실패했다. `--force-with-lease=<ref>:` 생성 전용 lease는 첫 push만 성공하고 두 번째는 `[rejected] (stale info)`였다(Linux Git 2.34.1). [git-behavior G1](probes/git-behavior.md#g1-worktree-생성과-정리), [G6](probes/git-behavior.md#g6-push-lease와-gh-pr-create의-push-동작)
 
 ### R49 gh 인증과 PR 미리보기의 외부 실행 경계
 
@@ -474,6 +482,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 근거: 설치 gh pr create --help, [gh PR 생성](https://cli.github.com/manual/gh_pr_create), [gh 환경 변수](https://cli.github.com/manual/gh_help_environment).
 - 심각도: 높음.
 - 반영: 미리보기는 로컬 렌더링만 한다. push 확인과 완료 뒤 명시적 repo/head/base/draft와 body-file로 생성한다. 기존 인증만 쓰고 token 조회, 로그인 및 scope 확대를 하지 않는다.
+- M0 결과: gh가 없는 환경이라 `gh pr create`를 실행하지 못했다. 공식 문서상 `--dry-run`도 push할 수 있고 `--head`를 주면 push와 fork를 건너뛴다. [git-behavior G6](probes/git-behavior.md#g6-push-lease와-gh-pr-create의-push-동작)
 
 ### R50 검사 끄기와 성공 gate 및 공개 표시의 충돌
 
@@ -498,8 +507,9 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 문제: 전체 ID의 문서 및 catalog 존재는 계정 접근이나 실제 실행을 보장하지 않는다. Fable은 설치된 Claude 버전이 부족하다.
 - 근거: Claude 2.1.316, Codex 내장 catalog, [Claude 목록](https://platform.claude.com/docs/en/models/overview), [모델 설정](https://code.claude.com/docs/en/model-config), [Codex Models](https://learn.chatgpt.com/docs/models).
 - 심각도: 중간.
-- 반영: doctor가 모델별 최소 CLI 버전을 검사하고 미달 agent를 failed-version-check로 처리한다. Fable 최소 2.1.321보다 낮은 설치 2.1.316에서 모델 호출하지 않는다.
+- 반영: doctor가 모델별 최소 CLI 버전을 검사하고 미달 agent를 failed-version-check로 처리한다. Fable 최소 2.1.321보다 낮은 설치 2.1.316에서 모델 호출하지 않는다. 이 반영은 D14로 바뀌었다.
 - 상태: 2026-11-17 결정 반영.
+- M0 결과: Claude 2.1.316에서 `claude-fable-5-2` 호출이 성공했다. 결정된 규칙의 전제와 달라 [D14](05-open-decisions.md#d14-fable과-최소-cli-버전-경고)로 정했다. 최소 버전 미달은 경고로 바꾸고 probe 결과로 판정한다. 2.1.321은 CLI가 이 ID를 인식하는 첫 버전이다. Codex 모델 4개는 0.167.0-alpha.3.2에서 실행됐다. [claude-headless C1](probes/claude-headless.md#c1-전체-모델-id-4개-지정), [codex-exec X1](probes/codex-exec.md#x1-모델-id-4개-지정)
 
 ### R53 결정 원문의 누락과 과거 요약 충돌
 
@@ -559,6 +569,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 근거: [npm lifecycle](https://docs.npmjs.com/cli/v11/using-npm/scripts/), [uv lock 및 sync](https://docs.astral.sh/uv/concepts/projects/sync/).
 - 심각도: 높음.
 - 반영: 정상 script 실행을 일괄 끄는 새 결정을 만들지 않았다. source와 lock 전후 및 의존성 산출물을 나누어 감사하고 변화를 baseline에 묻지 않는다. 악의적 script 방어는 보장하지 않는다.
+- M0 결과: `npm ci`가 루트 `preinstall`, `postinstall`, `prepare`를 실행했고 script가 source를 바꾸고 새 파일을 만들었다(exit 0, lock은 그대로). 의존성 패키지의 script와 uv의 build backend 변경은 시험하지 않았다. [prepare-behavior](probes/prepare-behavior.md#install-script가-source를-바꾸는지)
 
 ### R58 lock 부재와 자동 생성 및 갱신의 미결정
 
@@ -568,6 +579,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 심각도: 중간.
 - 반영: 해결: D12 확정. 기존 lock을 유지하고 부재와 manifest 불일치, run 안 lock 변경에서 중단한다. doctor가 run 밖 lock 생성을 안내한다.
 - 상태: 사용자 결정 반영으로 해결.
+- M0 결과: `uv sync`는 lock 부재에서 lock을 만들고 불일치에서 lock을 고친 뒤 exit 0이었다. `uv sync --frozen`은 불일치를 알리지 않고 성공했다. `npm ci`는 부재와 불일치에서 `EUSAGE`로 실패했다. [D16](05-open-decisions.md#d16-lock-일치-사전-확인)에 따라 등록 명령 전에 `uv lock --check`로 확인한다. 이 명령은 부재 exit 2, 불일치 exit 1이고 lock을 바꾸지 않았다. [prepare-behavior](probes/prepare-behavior.md#lock-부재와-불일치-때의-동작)
 
 ### R59 prepare 실패와 부분 의존성 상태의 재사용
 
@@ -576,6 +588,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 근거: [npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/)의 기존 node_modules 제거와 [npm scripts 종료](https://docs.npmjs.com/cli/v11/using-npm/scripts/#exiting).
 - 심각도: 중간.
 - 반영: 첫 실패와 timeout 및 취소에서 멈추고 부분 상태를 보존한다. planner로 가지 않으며 자동 정리와 재시도 및 명령 대체를 하지 않는다.
+- M0 결과: `npm ci`는 루트 `postinstall` 실패(exit 7)에도 `node_modules`를 설치된 채 남겼고, 실행할 때마다 기존 `node_modules`를 지웠다. `uv sync`는 build 실패와 `--locked` 실패에서 빈 `.venv`를 남겼다. 폴더 존재로 준비 완료를 판정할 수 없다. [prepare-behavior](probes/prepare-behavior.md#실패-뒤-부분-환경)
 
 ### R60 prepare 로그가 역할과 검사 결과로 혼입
 
@@ -600,6 +613,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 근거: [Git hooks](https://git-scm.com/docs/githooks), [post-commit](https://git-scm.com/docs/githooks#_post_commit), [post-checkout](https://git-scm.com/docs/githooks#_post_checkout).
 - 심각도: 높음.
 - 반영: hooks는 평소 실행한다. expected tree와 raw source를 재확인하고 다르면 기존 결과를 무효화한다. 이미 생긴 commit은 SHA와 committed-unverified를 보존하고 publish를 막으며 reset과 amend하지 않는다.
+- M0 결과: pre-commit이 다시 stage하면 `git write-tree`와 `HEAD^{tree}`가 달랐다. stage 밖 변경과 post-commit 변경은 tree가 같고 `git status`에만 나왔다. commit-msg hook은 commit 메시지를 바꿀 수 있었다. 메시지 확인 여부는 문서에 없다. [git-behavior G3](probes/git-behavior.md#g3-hook의-파일-변경과-tree-불일치-탐지)
 
 ### R63 npm 진입점과 version manager 경로 탐색
 
@@ -608,6 +622,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 근거: 로컬 Node v24.14.0 및 직접 npm/npx JS 11.9.0 확인, [npm launcher](https://github.com/npm/cli/blob/latest/bin/npm.cmd), [Corepack](https://github.com/nodejs/corepack).
 - 심각도: 중간.
 - 반영: 실제 node와 JS 및 버전을 한 조합으로 고정하고 변경 시 재검증한다. nvm use와 자동 설치를 수행하지 않는다. 다른 관리 도구 환경의 resolver는 미확인이다.
+- M0 결과: 이 PC의 기본 Node 설치에서 node 옆 `npm-cli.js`, `npx-cli.js` 직접 실행 버전(11.9.0)이 `npm.cmd`, `npx.cmd`와 같았다. nvm, Volta, fnm, Corepack shim 환경은 PC에 없어 확인 불가다. [windows-process W2](probes/windows-process.md#w2-npm과-npx를-node로-직접-실행할-때-경로-탐색)
 
 ### R64 doctor 최초 시험 자체의 파일 변경 부작용
 
@@ -624,6 +639,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 근거: [Git signing 설정](https://git-scm.com/docs/git-config#Documentation/git-config.txt-gpgprogram).
 - 심각도: 중간.
 - 반영: 사람 개입 필요 또는 무인 준비 미확인 상태에서는 commit 전에 중단한다. 설정을 끄지 않고 예상 밖 prompt와 timeout도 처리한다. 실제 signing 동작은 미확인이다.
+- M0 결과: `git config --show-origin --show-scope --get-regexp`로 서명 설정을 탐지할 수 있었다. 실패하는 서명 프로그램과 입력을 기다리는 서명 프로그램 모두 commit 전에 끝나 HEAD가 움직이지 않았다. 실제 gpg와 ssh agent는 시험하지 않았다. [git-behavior G4](probes/git-behavior.md#g4-사람-개입-서명-설정-탐지)
 
 ### R66 empty commit을 사용자 결정으로 기록한 오류
 
@@ -648,6 +664,7 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 - 근거: [npm run](https://docs.npmjs.com/cli/v11/commands/npm-run/), [npm exec](https://docs.npmjs.com/cli/v11/commands/npm-exec/), [Gradle Wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html), [Maven Wrapper](https://maven.apache.org/tools/wrapper/).
 - 심각도: 높음.
 - 반영: outer .cmd 우회와 shell 완전 제거를 구분했다. 필요한 패키지와 배포본은 prepare에서 확보하고 check에서는 누락을 실패로 처리한다. offline 옵션을 cache 설치까지 막는 보장으로 쓰지 않는다.
+- M0 결과: 공백 있는 wrapper 경로를 argv로 `cmd /d /s /c`에 넘기면 실행이 실패하고 `&` 인자가 명령으로 실행됐다. 다른 방식에서도 `%VAR%` 확장과 `^` 제거가 남았다. [D15](05-open-decisions.md#d15-cmd-wrapper-허용-조건)에 따라 공백 없는 경로와 특수문자 없는 인자만 허용한다. [windows-process W3](probes/windows-process.md#w3-cmd-d-s-c-wrapper-인자-처리)
 
 ### R69 doctor 1회 관측의 재사용 범위
 
@@ -676,21 +693,24 @@ Codex 조회에는 이전과 같은 임시 디렉터리와 PATH alias 생성 Acc
 
 ## 미확인 사실과 확인 방법
 
-기존 확인 과제는 남겨 두되 trusted-local 결정으로 MVP 밖에 둔 사전 격리와 현재 필요한 운영 확인을 구분한다.
+기존 확인 과제는 남겨 두되 trusted-local 결정으로 MVP 밖에 둔 사전 격리와 현재 필요한 운영 확인을 구분한다. M0 결과 열은 [docs/probes/](probes/README.md)의 확인 실험 결과다. 실행 환경은 #3, #4, #5가 Windows 11, #6이 Linux VM, #7이 Linux 컨테이너다.
 
-| ID | 미확인 사실 | 확인 방법과 범위 |
-|---|---|---|
-| U01 | 계정별 모델 제공과 실효 effort, protocol v2 Schema의 실제 CLI 수락 | 선택 agent의 사용량 probe. 최소 버전 미달은 호출 전 실패 |
-| U02 | 한도 오류와 잔량 및 reset 시각, CLI turn과 비용 상한 | 실제 오류 fixture. 추정값을 채우지 않음 |
-| U03 | native와 WSL2의 취소 및 자식 종료, 경로와 인코딩, 디스크 비용 | runtime별 실제 실행 시험 |
-| U04 | prepare 성공과 실패, install script 및 lock 변화, 부분 환경 재개 | 일회용 workspace에서 source와 lock 및 환경 전후 기록 |
-| U05 | check 및 check-probe의 실제 네트워크 차단과 파일 감사 | 실제 프로젝트 명령의 별도 probe. 악의적 외부 부작용 전체 방어는 보장 밖 |
-| U06 | nvm 등 관리 도구와 Corepack의 npm JS resolver, wrapper quoting과 취소 | 해당 환경에서 직접 경로와 버전 고정 및 fixture 시험 |
-| U07 | 실제 signing 프로그램과 agent의 무인 상태, hooks와 filters의 실제 변경 | 개인 설정과 실행 시험은 이번에 하지 않음. commit 전 준비 확인 및 tree 비교 필요 |
-| U08 | 준비 로그 분리와 환경 재현, custom 명령 시험 결과의 재사용 | prepare/check/check-probe record와 role 입력 fixture |
-| U09 | 제한 입력 tester 품질과 다양성 효과, P0부터 P5까지의 판정 일관성 | 고정 작업과 사람 판정 실험 |
-| U10 | 사용자 Git identity와 gh 인증 및 remote 공개 범위, commit/publish의 성공과 실패 재개 | 읽기 확인과 별도 end-to-end. 이번 작업에서 mutation 없음 |
-| U11 | 재배포 및 서비스화 조건과 선행 운영 사례 전체 | 본인 로컬 범위 밖 조건과 원본 로그가 필요 |
+| ID | 미확인 사실 | 확인 방법과 범위 | M0 결과 |
+|---|---|---|---|
+| U01 | 계정별 모델 제공과 실효 effort, protocol v2 Schema의 실제 CLI 수락 | 선택 agent의 사용량 probe. 최소 버전 미달은 경고 뒤 probe로 판정(D14) | 일부 확인. Claude 모델 4개와 Codex 모델 4개가 실행됐다. Fable은 최소 버전 미달에서도 실행돼 D14로 정했다. 공통 Schema는 Claude haiku와 Codex `gpt-6-astra`에서 수락됐다. 실효 effort는 두 CLI 모두 출력이 없어 미확인 |
+| U02 | 한도 오류와 잔량 및 reset 시각, CLI turn과 비용 상한 | 실제 오류 fixture. 추정값을 채우지 않음 | 인증 오류 형태는 확인. 한도 오류와 잔량, turn과 비용 상한은 확인 불가 |
+| U03 | native와 WSL2의 취소 및 자식 종료, 경로와 인코딩, 디스크 비용 | runtime별 실제 실행 시험 | native는 확인. 손자 프로세스 종료 방식별 결과, 출력 인코딩이 자식마다 다름(Python cp949, node와 git UTF-8). WSL2와 디스크 비용은 미확인 |
+| U04 | prepare 성공과 실패, install script 및 lock 변화, 부분 환경 재개 | 일회용 workspace에서 source와 lock 및 환경 전후 기록 | Linux에서 확인. lock 생성과 수정, 실패 뒤 부분 환경, 루트 lifecycle script의 source 변경. Windows 실행은 미확인 |
+| U05 | check 및 check-probe의 실제 네트워크 차단과 파일 감사 | 실제 프로젝트 명령의 별도 probe. 악의적 외부 부작용 전체 방어는 보장 밖 | 이번 M0에서 시험하지 않음 |
+| U06 | nvm 등 관리 도구와 Corepack의 npm JS resolver, wrapper quoting과 취소 | 해당 환경에서 직접 경로와 버전 고정 및 fixture 시험 | 기본 Node 설치의 npm JS 진입점은 확인. version manager와 Corepack shim은 확인 불가. wrapper는 D15의 허용 조건으로 정함 |
+| U07 | 실제 signing 프로그램과 agent의 무인 상태, hooks와 filters의 실제 변경 | 개인 설정과 실행 시험은 이번에 하지 않음. commit 전 준비 확인 및 tree 비교 필요 | hooks의 실행과 tree, status, 메시지 변경은 확인. 서명은 설정 탐지와 가짜 프로그램 실패만 확인. 실제 signing agent와 filters는 미확인 |
+| U08 | 준비 로그 분리와 환경 재현, custom 명령 시험 결과의 재사용 | prepare/check/check-probe record와 role 입력 fixture | 이번 M0에서 시험하지 않음 |
+| U09 | 제한 입력 tester 품질과 다양성 효과, P0부터 P5까지의 판정 일관성 | 고정 작업과 사람 판정 실험 | 이번 M0에서 시험하지 않음 |
+| U10 | 사용자 Git identity와 gh 인증 및 remote 공개 범위, commit/publish의 성공과 실패 재개 | 읽기 확인과 별도 end-to-end. 이번 작업에서 mutation 없음 | 생성 전용 push lease는 로컬 bare remote에서 확인. gh 인증과 실제 PR 생성, 재개는 미확인 |
+| U11 | 재배포 및 서비스화 조건과 선행 운영 사례 전체 | 본인 로컬 범위 밖 조건과 원본 로그가 필요 | 해당 없음 |
+| U12 | Codex 실행 파일의 발견 위치와 버전 고정 | doctor가 PATH 밖 설치를 어떻게 찾고 어느 실행 파일을 고정할지 시험 | M0에서 새로 생김. PATH에 `codex`가 없었고 Codex 앱 폴더의 `codex.exe`(0.167.0-alpha.3.2)를 썼다. 기존 기록은 0.169.0-alpha.11.1 |
+| U13 | Codex sandbox에서 역할 명령의 작업 폴더 | sandbox 모드별로 상대 경로 명령의 실행 위치 확인 | M0에서 새로 생김. read-only에서 작업 폴더가 `-C`와 달랐고 `CreateProcessWithLogonW failed: 267`이 있었다. workspace-write는 미확인 |
+| U14 | 비대화형 실행에 노출되는 사용자 MCP 도구와 skills | Claude의 도구 목록과 Codex의 skills 적용 범위를 출력이나 설정으로 확인 | M0에서 새로 생김. Claude 응답이 MCP 도구를 언급했고 Codex는 `.agents\skills`를 읽었다 |
 
 권한 profile의 사전 경로 차단과 악의적 controller 및 credential 접근 방어는 이번 MVP 완료 조건이 아니라 이후 검토 대상이다.
 

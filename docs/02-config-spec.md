@@ -45,20 +45,20 @@ Python의 provider_registry 모듈 한 곳에 회사별 모델과 근거 및 확
 
 registry의 enabled는 메뉴 선택 대상이라는 뜻이며 계정 제공과 실행 성공을 뜻하지 않는다.
 
-| 회사 | 전체 모델 ID | 확인된 최소 CLI 버전 | 현재 확인 |
+| 회사 | 전체 모델 ID | 확인된 최소 CLI 버전 | 현재 확인 | M0 실행 확인(2026-11-17, Windows) |
 |---|---|---|---|
-| Claude | claude-opus-5-5 | 2.1.280 | 설치 2.1.316은 버전 조건만 충족 |
-| Claude | claude-fable-5-2 | 2.1.321 | 설치 2.1.316은 미달, agent probe 실패 |
-| Claude | claude-sonnet-5-5 | 2.1.284 | 설치 2.1.316은 버전 조건만 충족 |
-| Claude | claude-haiku-5-5 | 2.1.293 | 설치 2.1.316은 버전 조건만 충족 |
-| Codex | gpt-6-astra | 미확인 | binary catalog에 존재 |
-| Codex | gpt-6.1-sol | 미확인 | binary catalog에 존재 |
-| Codex | gpt-6.1-terra | 미확인 | binary catalog에 존재 |
-| Codex | gpt-6-luna | 미확인 | binary catalog에 존재 |
+| Claude | claude-opus-5-5 | 2.1.280 | 설치 2.1.316은 버전 조건만 충족 | 2.1.316에서 실행됨 |
+| Claude | claude-fable-5-2 | 2.1.321 | 설치 2.1.316은 미달. D14에 따라 경고 | 2.1.316에서 실행됨. stderr에 `unrecognized_model` 표시. [D14](05-open-decisions.md#d14-fable과-최소-cli-버전-경고) |
+| Claude | claude-sonnet-5-5 | 2.1.284 | 설치 2.1.316은 버전 조건만 충족 | 2.1.316에서 실행됨 |
+| Claude | claude-haiku-5-5 | 2.1.293 | 설치 2.1.316은 버전 조건만 충족 | 2.1.316에서 실행됨. `--json-schema`, `--effort` 시험 모델 |
+| Codex | gpt-6-astra | 미확인 | binary catalog에 존재 | 0.167.0-alpha.3.2에서 실행됨. `--output-schema`, sandbox, effort 시험 모델 |
+| Codex | gpt-6.1-sol | 미확인 | binary catalog에 존재 | 0.167.0-alpha.3.2에서 실행됨 |
+| Codex | gpt-6.1-terra | 미확인 | binary catalog에 존재 | 0.167.0-alpha.3.2에서 실행됨 |
+| Codex | gpt-6-luna | 미확인 | binary catalog에 존재 | 0.167.0-alpha.3.2에서 실행됨 |
 
-근거: [Claude 목록](https://platform.claude.com/docs/en/models/overview), [Claude 모델 설정](https://code.claude.com/docs/en/model-config), [Codex Models](https://learn.chatgpt.com/docs/models), 이전에 실행한 codex debug models --bundled. 2026-11-17에도 claude --version에서 2.1.316을 확인했다. 계정 접근과 모델 실행 및 Schema 지원은 미확인이다.
+근거: [Claude 목록](https://platform.claude.com/docs/en/models/overview), [Claude 모델 설정](https://code.claude.com/docs/en/model-config), [Codex Models](https://learn.chatgpt.com/docs/models), 이전에 실행한 codex debug models --bundled. 2026-11-17에도 claude --version에서 2.1.316을 확인했다. M0 실행 확인 열은 [claude-headless](probes/claude-headless.md)와 [codex-exec](probes/codex-exec.md) 결과다. 이 계정에서 8개 모델 모두 실행됐다. Schema 수락은 표에 적은 시험 모델에서만 확인했다. Codex 실행 파일은 PATH에 없었고 Codex 앱 폴더의 `codex.exe`(0.167.0-alpha.3.2)를 썼다. 기존 기록의 0.169.0-alpha.11.1과 버전이 다르다.
 
-doctor는 실제 선택 runtime의 CLI 버전을 모델별 최소값과 비교한다. 미달이면 failed-version-check로 해당 agent의 probe를 실패 처리하고 모델을 호출하지 않는다. 전체 ID와 최소 버전을 바꾸거나 자동 업데이트 및 fallback하지 않는다. 최소값 미확인은 버전 성공이 아니며 별도 기능 probe가 필요하다.
+`min_cli_version`은 CLI가 그 모델 ID를 인식하는 첫 버전이다([D14](05-open-decisions.md#d14-fable과-최소-cli-버전-경고)). doctor는 실제 선택 runtime의 CLI 버전을 모델별 최소값과 비교한다. 미달이면 version-warning을 표시하고, 해당 agent의 probe 호출 결과로 사용 가능 여부를 판정한다. 경고에는 설치 버전과 최소 버전, CLI가 모델을 인식하지 못해 context window를 200K로 가정하고 effort 같은 기능이 기대대로 적용되지 않을 수 있다는 점, `claude update` 안내를 표시한다. 전체 ID와 최소 버전을 바꾸거나 자동 업데이트 및 fallback하지 않는다. 최소값 미확인은 버전 성공이 아니며 별도 기능 probe가 필요하다.
 
 ## project와 최상위
 
@@ -126,9 +126,18 @@ workspace → prepare → planner → approve → coder → [tester] → check �
 
 workspace를 만든 직후 prepare를 실행하고 성공해야 planner로 간다. lifecycle script도 등록 명령의 실제 동작에 포함한다. 버전과 cwd 및 config hash, source와 lock 전후 상태, 의존성 산출물과 종료 상태를 기록한다. 설치 인증은 패키지 관리자의 기존 경로를 사용하며 오케스트레이터가 토큰을 추출해 AI와 check에 전달하지 않는다.
 
-uv sync는 lock을 만들거나 갱신할 수 있고 npm ci는 기존 lock이 필요하다. source와 lock 변경을 성공 baseline으로 숨기지 않는다. D12에 따라 기존 lock을 유지하고 부재와 불일치 및 run 안 변경이면 중단한다. doctor가 부재를 미리 알리고 run 밖 lock 생성 명령을 안내한다. 선택된 등록 명령에 몰래 --locked를 추가하거나 npm install로 대체하지 않는다. [uv sync](https://docs.astral.sh/uv/concepts/projects/sync/), [npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/).
+lock 일치 확인은 설정 항목이 아니라 오케스트레이터 내장 단계다. [D16](05-open-decisions.md#d16-lock-일치-사전-확인)에 따라 등록 명령 전에 lock 종류별 확인 명령(uv는 `uv lock --check`)을 실행하고, 실패하면 prepare를 시작하지 않는다. npm 확인 명령은 정하지 않았다. uv sync는 lock을 만들거나 갱신할 수 있고 npm ci는 기존 lock이 필요하다. source와 lock 변경을 성공 baseline으로 숨기지 않는다. D12에 따라 기존 lock을 유지하고 부재와 불일치 및 run 안 변경이면 중단한다. doctor가 부재를 미리 알리고 run 밖 lock 생성 명령을 안내한다. 선택된 등록 명령에 몰래 --locked를 추가하거나 npm install로 대체하지 않는다. [uv sync](https://docs.astral.sh/uv/concepts/projects/sync/), [npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/).
 
 첫 준비 실패와 timeout 또는 취소에서 멈추고 부분 환경을 보존한다. 실패 환경을 준비 완료로 재사용하거나 자동 삭제 및 재시도하지 않는다. 재개는 source와 lock, 명령 및 환경을 다시 확인한다. 설치 stdout과 stderr는 모델 입력에 자동 첨부하지 않는다.
+
+M0 확인 결과([prepare-behavior](probes/prepare-behavior.md), Linux, uv 0.11.32, npm 10.9.9):
+
+- lock이 맞으면 `uv sync`와 `npm ci`는 source와 lock을 바꾸지 않고 의존성 산출물만 만든다.
+- `uv sync`는 lock 부재에서 lock을 만들고 불일치에서 lock을 고친 뒤 exit 0이다. `uv sync --frozen`은 불일치를 알리지 않고 성공해 전후 비교로도 탐지되지 않는다. [D16](05-open-decisions.md#d16-lock-일치-사전-확인)에 따라 등록 명령 전에 `uv lock --check`로 부재(exit 2)와 불일치(exit 1)를 먼저 확인하고, 전후 비교도 유지한다.
+- `uv sync --locked`는 실패해도 `.venv`를 먼저 만든다. `npm ci`는 실행할 때마다 기존 `node_modules`를 지우고, 루트 `postinstall`이 실패해도 설치한 의존성을 남긴다. 의존성 폴더 존재는 준비 완료의 근거가 아니다.
+- `npm ci`는 루트 `preinstall`, `postinstall`, `prepare` script를 실행하고 script가 source를 바꿀 수 있다.
+- 상속 환경 변수가 대상을 바꿀 수 있다. `UV_PROJECT_ENVIRONMENT`가 절대 경로면 `uv sync`가 worktree 밖 환경을 고치고 선언되지 않은 패키지를 지운다. `npm_config_global`, `npm_config_prefix` 등도 설치 위치를 바꾼다. prepare 실행 환경에서 이런 변수를 어떻게 다룰지는 문서에 없다.
+- Windows 실행과 lifecycle script의 `cmd.exe` 실행은 미확인이다.
 
 ## checks와 직접 입력 시험
 
@@ -171,15 +180,41 @@ checks.enabled=false는 기본 flow에서 not-run-disabled로 기록한다. 검�
 
 Claude --bare는 구독 OAuth를 읽지 않는 옵션이므로 구독 실행의 일괄 해결책으로 쓰지 않는다. tool 제한과 sandbox는 악의적 저장소 방어를 보장하는 동일 경계가 아니다. [Claude CLI](https://code.claude.com/docs/en/cli-reference), [Codex 비대화형 실행](https://learn.chatgpt.com/docs/non-interactive-mode).
 
+### M0에서 확인한 출력과 판정 근거
+
+Windows에서 Claude Code 2.1.316과 Codex CLI 0.167.0-alpha.3.2로 확인했다. 자세한 내용은 [claude-headless](probes/claude-headless.md)와 [codex-exec](probes/codex-exec.md)에 있다. adapter 설계에 영향을 주는 사실만 적는다.
+
+| 항목 | Claude Code | Codex CLI |
+|---|---|---|
+| 성공과 실패 | exit code와 `is_error`, `terminal_reason`. 오류에서도 `subtype`은 `success` | exit code와 마지막 이벤트(`turn.completed` 또는 `turn.failed`) |
+| 구조화 결과 위치 | `structured_output`. `result`에는 같은 내용이 문자열로 들어감 | `-o` 파일. 실패한 turn은 파일을 만들지 않음 |
+| 공통 Schema | role-result Schema 수락(haiku) | role-result Schema 수락(`gpt-6-astra`). required에 없는 property가 있으면 `invalid_json_schema`(400)로 거부 |
+| 모델 오류 | exit 1, `api_error_status` 404. stderr `unrecognized_model` 표시는 실행되는 모델에도 나옴 | exit 1, `turn.failed`의 메시지 |
+| 인증 오류 | exit 1, `api_error_status` null, `result` 문장으로만 구분 | 재시도 뒤 exit 1, `turn.failed`의 401 메시지. 구조화된 오류 코드 없음 |
+| effort | `low`, `medium`, `high`, `xhigh`, `max`. 알 수 없는 값은 경고 뒤 기본값으로 진행(exit 0) | API가 검사. 모델마다 지원 값이 다름. 지원하지 않는 값은 400으로 실패 |
+| 도구와 권한 | `--tools`에 없는 도구는 쓰지 못함. 목록에 있어도 `--allowedTools`가 없으면 `-p`에서 거부되고 `permission_denials`에 기록. 거부돼도 exit 0 | sandbox가 OS 접근 거부로 막음. `-a never`에서 승인 대기 없음. 실패한 명령은 `command_execution.exit_code`로 기록되고 turn은 계속 |
+| 새 세션 | `--no-session-persistence` 사용 | `--ephemeral`이면 세션 파일이 늘지 않음 |
+| 확장 설정 | 사용자 MCP 도구 노출 가능성 있음(미확인) | 사용자 홈의 `.agents\skills`를 읽음 |
+
+- 모델 응답 문장으로 판정하지 않는다는 원칙에 맞추려면 Claude 인증 오류는 `api_error_status`와 exit code를 우선 쓴다. 인증 없음을 가리키는 구조화 필드는 두 CLI 모두 없었다.
+- Claude는 알 수 없는 effort를 거부하지 않으므로 effort 값 검증은 오케스트레이터가 모델별로 한다.
+- Codex read-only sandbox에서 명령 작업 폴더가 `-C`와 다르게 잡힌 관찰이 있다. 역할 prompt와 명령은 작업 폴더의 절대 경로를 써야 할 수 있다([04-review U13](04-review.md#미확인-사실과-확인-방법)).
+- Codex 명령 출력(`aggregated_output`)의 한글은 대체 문자로 손실될 수 있다. 판정 근거로 쓰지 않는다.
+- 한도 오류 형태는 두 CLI 모두 확인하지 못했다.
+
 ## Windows 실행과 wrapper
 
 직접 .exe를 우선한다. npm과 npx는 .cmd를 실행하지 않고 doctor가 확인한 node.exe와 npm-cli.js 또는 npx-cli.js를 조합한다. 예를 들어 등록 argv가 npm ci이면 실제 실행은 해당 node와 확인한 npm JS 뒤에 ci를 전달한다. 등록 인자를 임의로 바꾸지 않는다.
 
 doctor는 실제 node, npm JS와 버전을 한 조합으로 고정한다. 인접 node_modules 경로만 추정하지 않고 global prefix와 version manager 및 Corepack shim을 구분한다. shim 선택을 바꾸는 nvm use나 자동 설치는 하지 않는다. 경로와 버전이 바뀌면 관련 기록을 무효화한다. [npm launcher](https://github.com/npm/cli/blob/latest/bin/npm.cmd), [Corepack](https://github.com/nodejs/corepack).
 
-현재 PC에서는 Node v24.14.0과 node로 실행한 npm 및 npx JS의 11.9.0을 확인했다. 다른 version manager와 Corepack 관리 환경의 resolver 성공은 미확인이다. node로 진입해도 npm package scripts는 Windows에서 cmd.exe를 사용할 수 있다. outer launcher 우회와 전체 shell 제거를 같은 뜻으로 쓰지 않는다. [npm run](https://docs.npmjs.com/cli/v11/commands/npm-run/).
+현재 PC에서는 Node v24.14.0과 node로 실행한 npm 및 npx JS의 11.9.0을 확인했다. M0에서 node 옆 `node_modules\npm\bin`의 JS 진입점이 `npm.cmd`, `npx.cmd`와 같은 버전임을 다시 확인했다([windows-process W2](probes/windows-process.md#w2-npm과-npx를-node로-직접-실행할-때-경로-탐색)). 다른 version manager와 Corepack 관리 환경의 resolver 성공은 미확인이다. node로 진입해도 npm package scripts는 Windows에서 cmd.exe를 사용할 수 있다. outer launcher 우회와 전체 shell 제거를 같은 뜻으로 쓰지 않는다. [npm run](https://docs.npmjs.com/cli/v11/commands/npm-run/).
 
 대체할 수 없는 gradlew.bat, mvn.cmd와 mvnw.cmd 같은 확인한 wrapper만 고정 경로와 고정 인자로 cmd.exe /d /s /c 실행을 허용한다. prompt와 handoff 문자열을 command에 합치지 않는다. /d와 /s가 자동으로 안전한 quoting을 제공한다고 주장하지 않는다. 공백과 한글, 따옴표와 shell 특수문자 처리는 doctor 시험 대상이다. [Microsoft cmd](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd), [Python subprocess](https://docs.python.org/3/library/subprocess.html#security-considerations).
+
+M0에서 argv `["cmd.exe","/d","/s","/c",<wrapper>,<인자>]`를 Python `subprocess`에 넘기면 wrapper 경로에 공백이 있을 때 wrapper가 실행되지 않았고 `&` 인자가 명령으로 실행됐다. 바깥 따옴표를 한 겹 더 씌운 명령 줄이나 공백 없는 경로에서는 실행됐지만, 모든 방식에서 `%VAR%`가 확장되고 `^`가 사라졌다([windows-process W3](probes/windows-process.md#w3-cmd-d-s-c-wrapper-인자-처리)). [D15](05-open-decisions.md#d15-cmd-wrapper-허용-조건)에 따라 wrapper 경로에 공백이 없고 인자에 `%`, `^`, `&`, `|`, `"`, `<`, `>`, `!`, 줄바꿈이 없을 때만 argv 배열로 `cmd.exe /d /s /c`를 실행하고, 나머지는 setup과 doctor가 거부한다.
+
+프로세스 트리 종료는 Python `Popen.kill()`과 `subprocess.run(timeout=)`만으로는 손자 프로세스가 남았다. `taskkill /T /F`, Job Object, 프로세스 그룹과 `CTRL_BREAK_EVENT`는 손자까지 끝냈다([windows-process W1](probes/windows-process.md#w1-시간-상한-뒤-자식-프로세스까지-종료)). 자식 프로세스의 출력 인코딩은 도구마다 달랐다(Python 자식 cp949, node와 git UTF-8). git 경로 목록은 `-z`로 받아야 한글이 escape되지 않는다([windows-process W4](probes/windows-process.md#w4-출력-인코딩)).
 
 npx의 로컬 대상과 Gradle 및 Maven 배포본, compiler와 plugin은 prepare에서 준비해야 한다. check에서 누락되면 실패하고 자동 설치하지 않는다. npx의 offline과 no 옵션은 방어 수단 제안일 뿐 cache 설치까지 모두 막는 보장으로 쓰지 않는다. 등록 인자와 local dependency 확인, 네트워크 차단 및 사후 감사를 함께 검사한다. [npm exec](https://docs.npmjs.com/cli/v11/commands/npm-exec/), [Gradle Wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html), [Maven Wrapper](https://maven.apache.org/tools/wrapper/).
 
